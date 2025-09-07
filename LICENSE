@@ -1,4 +1,18 @@
-                                 Apache License
+                      Commons Clause Restriction Notice
+                                Version 1.0
+
+The Software is provided under the Apache License, Version 2.0 (the “License”)
+with the following restriction:
+
+The license granted under the License is expressly conditioned upon, and
+subject to, the following limitation:
+You may not sell the Software or any derivative works, nor may you offer it
+as part of a commercial offering without obtaining prior written permission
+from the copyright holder (Santhosh Kumar).
+
+-------------------------------------------------------------------------------
+
+                                Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
 
@@ -186,7 +200,7 @@
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
-   Copyright [yyyy] [name of copyright owner]
+   Copyright 2025 Santhosh Kumar
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
