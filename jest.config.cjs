@@ -6,4 +6,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\.css$': 'identity-obj-proxy',
   },
+  collectCoverage: true,
+  coverageReporters: ['json', 'lcov', 'text', 'clover'],
+  coverageDirectory: 'coverage',
 };

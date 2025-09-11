@@ -1,5 +1,7 @@
 # Gemini LeetCode Assist
 
+[![CI](https://github.com/santhoshkumar/gemini-leetcode-assist/actions/workflows/ci.yml/badge.svg)](https://github.com/santhoshkumar/gemini-leetcode-assist/actions/workflows/ci.yml)
+
 This is a browser extension that assists users in solving LeetCode problems. It provides features like code suggestions, problem analysis, and solution generation.
 
 ## Features
