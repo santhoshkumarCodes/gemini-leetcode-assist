@@ -7,11 +7,12 @@ describe("E2E Tests", () => {
   beforeAll(async () => {
     const extensionPath = path.resolve(__dirname, "../../dist");
     browser = await puppeteer.launch({
-      headless: false,
+      headless: "new",
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,
         "--no-sandbox",
+        "--disable-setuid-sandbox",
       ],
     });
   });
