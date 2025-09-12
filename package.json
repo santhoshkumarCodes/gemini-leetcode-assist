@@ -9,7 +9,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "jest --testPathIgnorePatterns=e2e",
-    "test:e2e": "jest --config=jest.e2e.config.ts",
+    "test:e2e": "xvfb-run -a --server-args=\"-screen 0 1920x1080x24\" jest --config=jest.e2e.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:updates": "npm-check-updates",
