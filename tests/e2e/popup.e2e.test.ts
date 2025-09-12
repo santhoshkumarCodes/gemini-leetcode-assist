@@ -7,12 +7,15 @@ describe("E2E Tests", () => {
   beforeAll(async () => {
     const extensionPath = path.resolve(__dirname, "../../dist");
     browser = await puppeteer.launch({
-      headless: "new",
+      headless: false,
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-gpu",
+        "--disable-accelerated-2d-canvas",
+        "--disable-dev-shm-usage",
       ],
     });
   });
@@ -24,7 +27,6 @@ describe("E2E Tests", () => {
   it("should load the content script on a LeetCode problem page", async () => {
     const page = await browser.newPage();
     await page.goto("https://leetcode.com/problems/two-sum/");
-    await page.waitForSelector("#gemini-leetcode-assist-loaded");
     const contentScriptLoaded = await page.evaluate(() => {
       return !!document.getElementById("gemini-leetcode-assist-loaded");
     });
