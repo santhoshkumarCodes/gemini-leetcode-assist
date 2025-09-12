@@ -24,6 +24,7 @@ describe("E2E Tests", () => {
   it("should load the content script on a LeetCode problem page", async () => {
     const page = await browser.newPage();
     await page.goto("https://leetcode.com/problems/two-sum/");
+    await page.waitForSelector("#gemini-leetcode-assist-loaded");
     const contentScriptLoaded = await page.evaluate(() => {
       return !!document.getElementById("gemini-leetcode-assist-loaded");
     });
