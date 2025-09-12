@@ -6,23 +6,23 @@ This is a browser extension that assists users in solving LeetCode problems. It 
 
 ## Features
 
-*   **Code Suggestions:** Get real-time code suggestions as you type.
-*   **Problem Analysis:** Get a detailed analysis of the problem, including time and space complexity.
-*   **Solution Generation:** Generate a complete solution for the problem in your preferred language.
+- **Code Suggestions:** Get real-time code suggestions as you type.
+- **Problem Analysis:** Get a detailed analysis of the problem, including time and space complexity.
+- **Solution Generation:** Generate a complete solution for the problem in your preferred language.
 
 ## Tech Stack
 
-*   **Frontend:** React, TypeScript, Tailwind CSS
-*   **Build Tool:** Vite
-*   **State Management:** Redux Toolkit
-*   **Testing:** Jest, React Testing Library
+- **Frontend:** React, TypeScript, Tailwind CSS
+- **Build Tool:** Vite
+- **State Management:** Redux Toolkit
+- **Testing:** Jest, React Testing Library
 
 ## Getting Started
 
 ### Prerequisites
 
-*   Node.js (v18 or higher)
-*   npm
+- Node.js (v18 or higher)
+- npm
 
 ### Installation
 
