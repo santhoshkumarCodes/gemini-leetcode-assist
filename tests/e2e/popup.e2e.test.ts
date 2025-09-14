@@ -3,6 +3,7 @@ import * as path from "path";
 
 describe("E2E Tests", () => {
   let browser: Browser;
+  let page: Page;
 
   beforeAll(async () => {
     const extensionPath = path.resolve(__dirname, "../../dist");
@@ -18,27 +19,23 @@ describe("E2E Tests", () => {
         "--disable-dev-shm-usage",
       ],
     });
+    page = await browser.newPage();
   });
 
   afterAll(async () => {
+    if (page) {
+      await page.close();
+    }
     if (browser) {
       await browser.close();
     }
   });
 
   it("should load the content script on a LeetCode problem page", async () => {
-    let page: Page | undefined;
-    try {
-      page = await browser.newPage();
-      await page.goto("https://leetcode.com/problems/two-sum/");
-      const contentScriptLoaded = await page.evaluate(() => {
-        return !!document.getElementById("gemini-leetcode-assist-loaded");
-      });
-      expect(contentScriptLoaded).toBe(true);
-    } finally {
-      if (page) {
-        await page.close();
-      }
-    }
+    await page.goto("https://leetcode.com/problems/two-sum/");
+    const contentScriptLoaded = await page.evaluate(() => {
+      return !!document.getElementById("gemini-leetcode-assist-loaded");
+    });
+    expect(contentScriptLoaded).toBe(true);
   });
 });
