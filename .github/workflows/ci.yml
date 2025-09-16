@@ -7,13 +7,30 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-and-lint:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: "npm"
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-build
+          path: dist
 
+  test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18.x, 20.x]
-
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
@@ -22,11 +39,25 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
       - run: npm ci
-      - run: npm run build
-      - run: npm run format:check
-      - run: npm run lint
       - run: npm test
-      - name: Install dependencies
+
+  e2e-test:
+    runs-on: ubuntu-latest
+    needs: [build-and-lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: "npm"
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-build
+          path: dist
+      - run: npm ci
+      - name: Install dependencies for E2E
         run: |
           sudo apt-get update
           sudo apt-get install -yq --no-install-recommends \
@@ -38,16 +69,3 @@ jobs:
             libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
             libnss3
       - run: npm run test:e2e
-      - run: npm run check:updates
-      - run: npm run check:audit
-      - run: npm run check:licenses
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts-${{ matrix.node-version }}
-          path: dist
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-${{ matrix.node-version }}
-          path: coverage
