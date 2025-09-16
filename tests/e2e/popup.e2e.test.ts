@@ -33,9 +33,10 @@ describe("E2E Tests", () => {
 
   it("should load the content script on a LeetCode problem page", async () => {
     await page.goto("https://leetcode.com/problems/two-sum/");
-    const contentScriptLoaded = await page.evaluate(() => {
-      return !!document.getElementById("gemini-leetcode-assist-loaded");
-    });
-    expect(contentScriptLoaded).toBe(true);
+    const contentScriptLoaded = await page.waitForFunction(
+      () => !!document.getElementById("gemini-leetcode-assist-loaded"),
+      { timeout: 20000 }, // Increase as needed
+    );
+    expect(contentScriptLoaded).toBeTruthy();
   });
 });

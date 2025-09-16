@@ -22,6 +22,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
       - run: npm ci
+      - run: npm run build
       - run: npm run format:check
       - run: npm run lint
       - run: npm test
@@ -40,7 +41,6 @@ jobs:
       - run: npm run check:updates
       - run: npm run check:audit
       - run: npm run check:licenses
-      - run: npm run build
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
