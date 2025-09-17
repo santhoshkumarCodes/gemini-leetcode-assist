@@ -1,6 +1,9 @@
 # LeetCode Assist (Powered by Gemini)
 
-[![CI](https://github.com/santhoshkumar/gemini-leetcode-assist/actions/workflows/ci.yml/badge.svg)](https://github.com/santhoshkumar/gemini-leetcode-assist/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Coming%20Soon-orange)](https://chrome.google.com/webstore)
+[![Made with React](https://img.shields.io/badge/Made%20with-React-61dafb.svg)](https://react.dev)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Gemini-4285F4)](https://deepmind.google/technologies/gemini/)
 
 An AI-powered Chrome extension designed to enhance your LeetCode problem-solving experience.  
 Built with **React, Redux, TypeScript, and TailwindCSS**, it integrates seamlessly with the LeetCode problem interface to provide **AI-powered hints, explanations, and interview-style assistance directly inside LeetCode using Gemini**.
