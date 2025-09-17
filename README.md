@@ -1,21 +1,20 @@
-# Gemini LeetCode Assist
+# LeetCode Assist (Powered by Gemini)
 
 [![CI](https://github.com/santhoshkumar/gemini-leetcode-assist/actions/workflows/ci.yml/badge.svg)](https://github.com/santhoshkumar/gemini-leetcode-assist/actions/workflows/ci.yml)
 
-This is a browser extension that assists users in solving LeetCode problems. It provides features like code suggestions, problem analysis, and solution generation.
+An AI-powered Chrome extension designed to enhance your LeetCode problem-solving experience.  
+Built with **React, Redux, TypeScript, and TailwindCSS**, it integrates seamlessly with the LeetCode problem interface to provide **AI-powered hints, explanations, and interview-style assistance directly inside LeetCode using Gemini**.
+
+---
 
 ## Features
 
-- **Code Suggestions:** Get real-time code suggestions as you type.
-- **Problem Analysis:** Get a detailed analysis of the problem, including time and space complexity.
-- **Solution Generation:** Generate a complete solution for the problem in your preferred language.
+- **Live AI Guidance** – Get instant explanations and insights while solving problems.
+- **Interactive Interview Mode** – Practice by discussing your approach with the assistant, simulating real interview scenarios.
+- **Problem-Specific Chat Help** – Ask context-aware questions tied to the exact problem you are working on.
+- **Image Context Support** – Upload diagrams or screenshots to enhance your discussions.
 
-## Tech Stack
-
-- **Frontend:** React, TypeScript, Tailwind CSS
-- **Build Tool:** Vite
-- **State Management:** Redux Toolkit
-- **Testing:** Jest, React Testing Library
+---
 
 ## Getting Started
 
@@ -23,12 +22,13 @@ This is a browser extension that assists users in solving LeetCode problems. It 
 
 - Node.js (v18 or higher)
 - npm
+- xvfb (for E2E testing)
 
 ### Installation
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/your-username/gemini-leetcode-assist.git
+    git clone https://github.com/santhoshkumarCodes/gemini-leetcode-assist.git
     ```
 2.  Install the dependencies:
     ```bash
@@ -53,8 +53,18 @@ This will create a `dist` directory with the production-ready extension files.
 
 ### Testing
 
+#### Unit Tests
+
 ```bash
 npm run test
 ```
 
 This will run the unit tests using Jest.
+
+#### E2E Tests
+
+The E2E tests use Puppeteer to simulate user interactions in a real browser environment. They run in a headless browser using `xvfb`.
+
+```bash
+npm run test:e2e
+```
