@@ -4,6 +4,7 @@ import * as path from "path";
 describe("E2E Tests", () => {
   let browser: Browser;
   let page: Page;
+  let serviceWorker: puppeteer.WebWorker;
 
   beforeAll(async () => {
     const extensionPath = path.resolve(__dirname, "../../dist");
@@ -20,6 +21,12 @@ describe("E2E Tests", () => {
       ],
     });
     page = await browser.newPage();
+    const extensionTarget = await browser.waitForTarget(
+      (target) => target.type() === "service_worker",
+      { timeout: 10000 },
+    );
+    serviceWorker = await extensionTarget.worker();
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
   afterAll(async () => {
@@ -31,12 +38,31 @@ describe("E2E Tests", () => {
     }
   });
 
-  it("should load the content script on a LeetCode problem page", async () => {
+  it("should correctly extract problem data and store it in chrome storage", async () => {
     await page.goto("https://leetcode.com/problems/two-sum/");
-    const contentScriptLoaded = await page.waitForFunction(
-      () => !!document.getElementById("gemini-leetcode-assist-loaded"),
-      { timeout: 20000 }, // Increase as needed
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('script[src*="injected-script.js"]');
+        return !el; // Wait until the injected script is removed (which happens on load)
+      },
+      { timeout: 10000 },
     );
-    expect(contentScriptLoaded).toBeTruthy();
+
+    // Wait a bit for the async operations (parsing, message passing) to complete
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const problemData = await serviceWorker.evaluate(() => {
+      return new Promise<never>((resolve) => {
+        chrome.storage.local.get("leetcode-problem-two-sum", (result) => {
+          resolve(result["leetcode-problem-two-sum"]);
+        });
+      });
+    });
+
+    expect(problemData).toBeDefined();
+    expect(problemData).toHaveProperty("title");
+    expect(problemData.title).toContain("Two Sum");
+    expect(problemData).toHaveProperty("code");
+    expect(problemData).toHaveProperty("timestamp");
   });
 });

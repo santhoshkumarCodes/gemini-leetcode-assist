@@ -37,4 +37,12 @@ export default tseslint.config(
       "no-useless-escape": "off",
     },
   },
+  {
+    files: ["src/scripts/injected/injected-script.js"],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
 );
