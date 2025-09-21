@@ -1,49 +1,46 @@
 // Import mockChrome from setupTests
 import { mockChrome } from "./setupTests";
 
-// Require the script under test. It will now use the global mock defined above.
-import "../scripts/background";
+// Define a type for the message listener
+type MessageListener = (
+  message: unknown,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: unknown) => void,
+) => boolean | void;
 
 describe("background script", () => {
-  let messageCallback: jest.Mock;
+  let capturedListener: MessageListener;
 
-  beforeEach(() => {
-    // Reset modules to ensure we get a fresh script instance
+  beforeEach(async () => {
+    // Reset modules to ensure we get a fresh script instance and clear mocks
     jest.resetModules();
     jest.clearAllMocks();
 
-    // Set up tabs.query mock to immediately execute the callback
+    // Spy on addListener to capture the callback, then import the script
+    const addListenerSpy = jest.spyOn(
+      mockChrome.runtime.onMessage,
+      "addListener",
+    );
+
+    await import("../scripts/background");
+
+    // Ensure the listener was registered and capture it
+    expect(addListenerSpy).toHaveBeenCalledTimes(1);
+    capturedListener = addListenerSpy.mock.calls[0][0] as MessageListener;
+
+    // Mock implementations for chrome APIs
     mockChrome.tabs.query.mockImplementation((_query, callback) => {
       callback([{ id: 456 }]);
     });
 
-    // Create a mock message handler function since we can't reliably get it from the Chrome API
-    messageCallback = jest.fn((message, sender, sendResponse) => {
-      if (message.type === "PROBLEM_UPDATE") {
-        const key = `leetcode-problem-${message.payload.problemSlug}`;
-        mockChrome.storage.local.set({ [key]: message.payload.data }, () => {
-          console.log(`Stored problem data for ${message.payload.problemSlug}`);
-        });
-      } else if (message.type === "GET_TAB_ID") {
-        if (sender.tab) {
-          sendResponse({ tabId: sender.tab.id });
-        } else {
-          mockChrome.tabs.query(
-            { active: true, currentWindow: true },
-            (tabs: { id: never }[]) => {
-              sendResponse({ tabId: tabs[0]?.id });
-            },
-          );
-          // Note: In a real implementation, we'd return true to indicate we'll call sendResponse asynchronously
-        }
+    mockChrome.storage.local.set.mockImplementation((_items, callback) => {
+      if (callback) {
+        callback();
       }
     });
-
-    // Register our mock function as the message listener
-    mockChrome.runtime.onMessage.addListener(messageCallback);
   });
 
-  it("should handle PROBLEM_UPDATE and save to storage, then log", () => {
+  it("should handle PROBLEM_UPDATE and save to storage", () => {
     const mockMessage = {
       type: "PROBLEM_UPDATE",
       payload: {
@@ -52,14 +49,7 @@ describe("background script", () => {
       },
     };
 
-    // Mock the callback execution
-    mockChrome.storage.local.set.mockImplementation((_items, callback) => {
-      if (callback) {
-        callback();
-      }
-    });
-
-    messageCallback(mockMessage, {} as unknown, jest.fn());
+    capturedListener(mockMessage, {} as never, jest.fn());
 
     expect(mockChrome.storage.local.set).toHaveBeenCalledWith(
       {
@@ -71,9 +61,9 @@ describe("background script", () => {
 
   it("should handle GET_TAB_ID and respond with sender tab ID", () => {
     const mockSendResponse = jest.fn();
-    messageCallback(
+    capturedListener(
       { type: "GET_TAB_ID" },
-      { tab: { id: 123 } } as unknown,
+      { tab: { id: 123 } } as never,
       mockSendResponse,
     );
     expect(mockSendResponse).toHaveBeenCalledWith({ tabId: 123 });
@@ -81,13 +71,18 @@ describe("background script", () => {
 
   it("should handle GET_TAB_ID and query for tab ID when sender has no tab", () => {
     const mockSendResponse = jest.fn();
-    messageCallback({ type: "GET_TAB_ID" }, {} as unknown, mockSendResponse);
+    const result = capturedListener(
+      { type: "GET_TAB_ID" },
+      {} as never,
+      mockSendResponse,
+    );
 
     expect(mockChrome.tabs.query).toHaveBeenCalledWith(
       { active: true, currentWindow: true },
       expect.any(Function),
     );
     expect(mockSendResponse).toHaveBeenCalledWith({ tabId: 456 });
+    expect(result).toBe(true); // Should return true for async response
   });
 
   it("should handle GET_TAB_ID and respond with undefined when no tab is found", () => {
@@ -97,12 +92,21 @@ describe("background script", () => {
       callback([]);
     });
 
-    messageCallback({ type: "GET_TAB_ID" }, {} as unknown, mockSendResponse);
+    capturedListener({ type: "GET_TAB_ID" }, {} as never, mockSendResponse);
 
     expect(mockChrome.tabs.query).toHaveBeenCalledWith(
       { active: true, currentWindow: true },
       expect.any(Function),
     );
     expect(mockSendResponse).toHaveBeenCalledWith({ tabId: undefined });
+  });
+
+  it("should do nothing for unknown message types", () => {
+    const mockSendResponse = jest.fn();
+    capturedListener({ type: "UNKNOWN" }, {} as never, mockSendResponse);
+
+    expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
+    expect(mockChrome.tabs.query).not.toHaveBeenCalled();
+    expect(mockSendResponse).not.toHaveBeenCalled();
   });
 });
