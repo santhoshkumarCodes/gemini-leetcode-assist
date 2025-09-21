@@ -3,7 +3,7 @@
   "name": "LeetCode Assist by Gemini",
   "version": "1.0",
   "description": "A Chrome extension to assist with LeetCode problems.",
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "storage"],
   "icons": {
     "16": "icon.svg",
     "48": "icon.svg",
@@ -17,5 +17,14 @@
   ],
   "action": {
     "default_popup": "index.html"
-  }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected-script.js"],
+      "matches": ["https://leetcode.com/*"]
+    }
+  ]
 }

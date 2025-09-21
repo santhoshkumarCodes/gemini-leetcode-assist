@@ -20,6 +20,11 @@ export default defineConfig(({ mode }) => {
             __dirname,
             "src/scripts/content-script/content-script.ts",
           ),
+          background: path.resolve(__dirname, "src/scripts/background.ts"),
+          "injected-script": path.resolve(
+            __dirname,
+            "src/scripts/injected/injected-script.js",
+          ),
         },
         output: {
           entryFileNames: "[name].js",
