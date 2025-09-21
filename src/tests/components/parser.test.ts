@@ -15,6 +15,7 @@ describe("parseLeetCodeProblem", () => {
           <div><p>Given an array of integers...</p></div>
           <div class="example">Example 1</div>
           <pre>Example 1 Content</pre>
+          <strong>Constraints:</strong>
           <ul><li>Constraint 1</li></ul>
         </div>
       </div>

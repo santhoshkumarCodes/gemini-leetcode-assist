@@ -61,4 +61,6 @@ parseLeetCodeProblem()
       sendUnifiedUpdate(lastSentCode);
     }
   })
-  .catch(() => {});
+  .catch((error) => {
+    console.error("Failed to parse LeetCode problem details:", error);
+  });

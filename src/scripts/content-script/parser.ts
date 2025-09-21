@@ -19,7 +19,14 @@ export async function parseLeetCodeProblem() {
     (pre) => pre.textContent?.trim() || "",
   );
 
-  const constraints = contentNode?.querySelector("ul")?.innerHTML || "";
+  const constraintsHeading = [
+    ...(contentNode?.querySelectorAll("strong, b") ?? []),
+  ].find((el) => el.textContent?.trim() === "Constraints:");
+  const constraintsElement =
+    constraintsHeading?.nextElementSibling ??
+    constraintsHeading?.parentElement?.nextElementSibling;
+  const constraints =
+    constraintsElement?.tagName === "UL" ? constraintsElement.innerHTML : "";
 
   const result = {
     title,

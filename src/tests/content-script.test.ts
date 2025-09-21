@@ -155,9 +155,14 @@ describe("content-script", () => {
     expect(mockChrome.runtime.sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  it("logs an error and does not send when problem slug is missing", async () => {
+  it("does not send when problem slug is missing", async () => {
+    window.history.replaceState({}, "", "/problems/"); // No slug
     await import("../scripts/content-script/content-script");
     await Promise.resolve();
+
+    sendCodeUpdate("let a = 1;");
+
+    expect(mockChrome.runtime.sendMessage).not.toHaveBeenCalled();
   });
 
   it("ignores non-CODE_UPDATE messages and messages not from window", async () => {
@@ -185,11 +190,16 @@ describe("content-script", () => {
   it("logs parse errors when parsing problem details fails", async () => {
     const error = new Error("boom");
     mockParseImpl = () => Promise.reject(error);
-
+    const consoleErrorSpy = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     await import("../scripts/content-script/content-script");
-
-    // allow the catch to run
-    await Promise.resolve();
-    await Promise.resolve();
+    // allow the promise rejection to be handled
+    await new Promise(process.nextTick);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Failed to parse LeetCode problem details:",
+      error,
+    );
+    consoleErrorSpy.mockRestore();
   });
 });

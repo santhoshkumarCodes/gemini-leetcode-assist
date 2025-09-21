@@ -19,7 +19,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { problemSlug, data } = message.payload;
     if (problemSlug) {
       const key = `leetcode-problem-${problemSlug}`;
-      chrome.storage.local.set({ [key]: data }, () => {});
+      chrome.storage.local.set({ [key]: data }, () => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            `Error setting storage key "${key}": ${chrome.runtime.lastError.message}`,
+          );
+        }
+      });
     }
   }
 });

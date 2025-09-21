@@ -60,7 +60,10 @@
     // Send initial code state
     const initialCode = getCode();
     if (initialCode) {
-      window.postMessage({ type: "CODE_UPDATE", code: initialCode }, "*");
+      window.postMessage(
+        { type: "CODE_UPDATE", code: initialCode },
+        window.location.origin,
+      );
     }
   }
 
