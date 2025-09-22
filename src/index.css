@@ -1,1 +1,7 @@
 @import "tailwindcss";
+@import "react-resizable/css/styles.css";
+
+.glass {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
