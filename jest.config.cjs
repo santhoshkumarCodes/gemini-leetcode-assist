@@ -7,7 +7,7 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/src/tests/setupTests.ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
-    "\.css$": "identity-obj-proxy",
+    "\\.css$": "identity-obj-proxy",
   },
   collectCoverage: true,
   coverageReporters: ["json", "lcov", "text", "clover"],
