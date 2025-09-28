@@ -24,7 +24,7 @@ const ChatMessage: FC<ChatMessageProps> = ({ text, isUser }) => {
 
   return (
     <div className="flex justify-start mb-2">
-      <div className="text-white max-w-[98%] markdown-container">
+      <div className="text-white max-w-[100%] markdown-container">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -35,6 +35,7 @@ const ChatMessage: FC<ChatMessageProps> = ({ text, isUser }) => {
                 <div className="relative">
                   <CopyButton textToCopy={codeText} />
                   <SyntaxHighlighter
+                    className="custom-scrollbar"
                     style={vscDarkPlus}
                     language={match[1]}
                     PreTag="div"

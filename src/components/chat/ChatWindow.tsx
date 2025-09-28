@@ -72,7 +72,7 @@ const ChatWindow: FC = () => {
       >
         <div
           ref={nodeRef}
-          className="@container absolute bg-black/50 rounded-lg shadow-2xl border border-white/20 flex flex-col pointer-events-auto overflow-hidden glass transform-gpu"
+          className="@container absolute bg-[#1E1E1E]/80 rounded-lg shadow-2xl border border-white/20 flex flex-col pointer-events-auto overflow-hidden glass transform-gpu"
           style={{
             width: chatSize.width,
             height: isChatMinimized ? 40 : chatSize.height,
@@ -113,18 +113,43 @@ const ChatWindow: FC = () => {
 
           {!isChatMinimized && (
             <>
-              <div className="flex-grow p-4 overflow-y-auto">
-                {messages.map((msg, index) => (
-                  <ChatMessage
-                    key={index}
-                    text={msg.text}
-                    isUser={msg.isUser}
-                  />
-                ))}
+              <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
+                {messages.length === 0 && !isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center text-white">
+                    <h2 className="text-xl font-bold">
+                      <span
+                        style={{
+                          background:
+                            "linear-gradient(to right, #8b5cf6, #3b82f6, #06b6d4)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                        }}
+                      >
+                        Hello, LeetCoder
+                      </span>
+                    </h2>
+                    <h1>
+                        <span className="text-white/70">
+                            How can I assist you with Two Sum problem?
+                        </span>
+                    </h1>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map((msg, index) => (
+                      <ChatMessage
+                        key={index}
+                        text={msg.text}
+                        isUser={msg.isUser}
+                      />
+                    ))}
+                  </>
+                )}
+
                 {isLoading && <ChatMessage text="..." isUser={false} />}
                 {error && <ChatMessage text={error} isUser={false} />}
               </div>
-              <div className="p-2 border-t border-white/20">
+              <div className="p-2">
                 {apiKey ? (
                   <MessageInput onSendMessage={handleSendMessage} />
                 ) : (

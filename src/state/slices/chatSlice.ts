@@ -8,12 +8,7 @@ export interface ChatState {
 }
 
 const initialState: ChatState = {
-  messages: [
-    {
-      text: "Hello! I'm Gemini. I can help you with LeetCode problems. How can I assist you today?",
-      isUser: false,
-    },
-  ],
+  messages: [],
 };
 
 const chatSlice = createSlice({

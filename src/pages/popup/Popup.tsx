@@ -37,7 +37,7 @@ const Popup: FC = () => {
   };
 
   return (
-    <div className="w-80 bg-black/30 backdrop-blur-lg text-white p-4">
+    <div className="w-80 text-white p-6">
       {showSettings ? (
         <div>
           <button
@@ -69,10 +69,12 @@ const Popup: FC = () => {
         </div>
       ) : (
         <div>
-          <h1 className="text-xl mb-4">Gemini LeetCode Assist</h1>
+          <h1 className="text-2xl font-bold mb-6 text-center">
+            Gemini LeetCode Assist
+          </h1>
           <button
             onClick={handleToggleChat}
-            className="w-full flex items-center justify-center bg-white/10 p-2 rounded-lg mb-2 hover:bg-white/20"
+            className="w-full flex items-center justify-center bg-white/10 p-2 rounded-lg mb-3 hover:bg-white/20"
           >
             <MessageSquare className="mr-2" />
             Open Chat Window
