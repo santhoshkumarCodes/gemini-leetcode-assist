@@ -6,12 +6,20 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import "./ChatMessage.css";
 import CopyButton from "./CopyButton";
 
-interface ChatMessageProps {
+type MessageShape = {
+  id?: string;
   text: string;
-  isUser: boolean;
-}
+  sender?: "user" | "bot" | string;
+};
 
-const ChatMessage: FC<ChatMessageProps> = ({ text, isUser }) => {
+type ChatMessageProps =
+  | { text: string; isUser: boolean }
+  | { message: MessageShape };
+
+const ChatMessage: FC<ChatMessageProps> = (props) => {
+  // Support two prop shapes used across code/tests
+  const text = "text" in props ? props.text : props.message?.text || "";
+  const isUser = "isUser" in props ? props.isUser : props.message?.sender === "user";
   if (isUser) {
     return (
       <div className="flex justify-end mb-2">
