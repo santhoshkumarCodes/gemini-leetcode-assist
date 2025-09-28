@@ -1,23 +1,23 @@
-import React from 'react';
+import React from "react";
 
 interface SyntaxHighlighterProps {
   children: string;
   language?: string;
-  style?: any;
+  style?: unknown;
   PreTag?: string;
   className?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-export const Prism: React.FC<SyntaxHighlighterProps> = ({ 
-  children, 
-  language, 
+export const Prism: React.FC<SyntaxHighlighterProps> = ({
+  children,
+  language,
   className,
-  ...props 
+  ...props
 }) => {
   return (
-    <pre 
-      data-testid="syntax-highlighter" 
+    <pre
+      data-testid="syntax-highlighter"
       data-language={language}
       className={className}
       {...props}
@@ -27,15 +27,15 @@ export const Prism: React.FC<SyntaxHighlighterProps> = ({
   );
 };
 
-const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({ 
-  children, 
+const SyntaxHighlighter: React.FC<SyntaxHighlighterProps> = ({
+  children,
   language,
   className,
-  ...props 
+  ...props
 }) => {
   return (
-    <pre 
-      data-testid="syntax-highlighter" 
+    <pre
+      data-testid="syntax-highlighter"
       data-language={language}
       className={className}
       {...props}

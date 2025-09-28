@@ -19,7 +19,8 @@ type ChatMessageProps =
 const ChatMessage: FC<ChatMessageProps> = (props) => {
   // Support two prop shapes used across code/tests
   const text = "text" in props ? props.text : props.message?.text || "";
-  const isUser = "isUser" in props ? props.isUser : props.message?.sender === "user";
+  const isUser =
+    "isUser" in props ? props.isUser : props.message?.sender === "user";
   if (isUser) {
     return (
       <div className="flex justify-end mb-2">
@@ -36,7 +37,7 @@ const ChatMessage: FC<ChatMessageProps> = (props) => {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            code({ node, className, children, ...props }) {
+            code({ className, children, ...props }) {
               const match = /language-(\w+)/.exec(className || "");
               const codeText = String(children).replace(/\n$/, "");
               return match ? (

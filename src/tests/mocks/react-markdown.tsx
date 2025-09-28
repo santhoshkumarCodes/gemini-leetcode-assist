@@ -1,10 +1,10 @@
-import React from 'react';
+import React from "react";
 
 interface ReactMarkdownProps {
   children: string;
-  remarkPlugins?: any[];
+  remarkPlugins?: unknown[];
   components?: {
-    [key: string]: React.ComponentType<any>;
+    [key: string]: React.ComponentType<unknown>;
   };
 }
 

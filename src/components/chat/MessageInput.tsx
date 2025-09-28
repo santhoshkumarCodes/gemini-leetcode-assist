@@ -40,12 +40,14 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 border-b-gray-700 rounded-full px-1 py-1">
             <Bot size={16} className="text-purple-400" />
-            <span className="text-sm font-medium text-white/80">Gemini 2.5 Pro</span>
+            <span className="text-sm font-medium text-white/80">
+              Gemini 2.5 Pro
+            </span>
           </div>
         </div>
         <button
           onClick={handleSend}
-          className={`p-2 rounded-full ${!message.trim() ? 'bg-gray-500 text-gray-800' : 'bg-gray-200 text-white'}`}
+          className={`p-2 rounded-full ${!message.trim() ? "bg-gray-500 text-gray-800" : "bg-gray-200 text-white"}`}
           disabled={!message.trim()}
         >
           <ArrowRight size={20} />

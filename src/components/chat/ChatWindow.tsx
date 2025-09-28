@@ -129,9 +129,9 @@ const ChatWindow: FC = () => {
                       </span>
                     </h2>
                     <h1>
-                        <span className="text-white/70">
-                            How can I assist you with Two Sum problem?
-                        </span>
+                      <span className="text-white/70">
+                        How can I assist you with Two Sum problem?
+                      </span>
                     </h1>
                   </div>
                 ) : (
