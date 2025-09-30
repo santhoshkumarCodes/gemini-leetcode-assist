@@ -24,6 +24,7 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
   return (
     <div className="bg-[#2a2a2a] rounded-lg p-1 flex flex-col gap-1">
       <textarea
+        id="gemini-chat-input"
         className="bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none text-sm px-1 pt-1 custom-scrollbar"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
@@ -46,6 +47,7 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
           </div>
         </div>
         <button
+          id="gemini-chat-send-button"
           onClick={handleSend}
           className={`p-2 rounded-full ${!message.trim() ? "bg-gray-500 text-gray-800" : "bg-gray-200 text-white"}`}
           disabled={!message.trim()}
