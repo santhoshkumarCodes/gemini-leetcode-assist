@@ -20,8 +20,11 @@ const apiSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
     },
+    clearError: (state) => {
+      state.error = null;
+    },
   },
 });
 
-export const { setLoading, setError } = apiSlice.actions;
+export const { setLoading, setError, clearError } = apiSlice.actions;
 export default apiSlice.reducer;

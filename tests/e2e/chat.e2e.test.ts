@@ -65,7 +65,9 @@ describe("Chat E2E", () => {
     await popupPage.waitForSelector("button", { timeout: 5000 });
     const clicked = await popupPage.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll("button"));
-      const btn = buttons.find((b) => b.textContent?.includes("Open Chat Window"));
+      const btn = buttons.find((b) =>
+        b.textContent?.includes("Open Chat Window"),
+      );
       if (!btn) return false;
       (btn as HTMLButtonElement).click();
       return true;

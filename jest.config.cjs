@@ -7,7 +7,7 @@ module.exports = {
     "/node_modules/(?!(react-markdown|vfile|unist-util-stringify-position|unified|bail|is-plain-obj|decode-named-character-reference|remark-parse|mdast-util-from-markdown|micromark|micromark-util-decode-numeric-character-reference|micromark-util-encode|micromark-util-html-tag-name|micromark-util-sanitize-uri|micromark-util-symbol|parse-entities|ccount|escape-string-regexp|markdown-table|trim-lines|devlop|hast-util-to-jsx-runtime)/)",
   ],
   moduleNameMapper: {
-    "\\.(css|less|scss|sass)$": "jest-transform-stub",
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "^@/(.*)$": "<rootDir>/src/$1",
     "^react-markdown$": "<rootDir>/src/tests/mocks/react-markdown.tsx",
     "^react-syntax-highlighter$":

@@ -16,9 +16,7 @@ const Popup: FC = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (apiKey) {
-      setApiKeyInput(apiKey);
-    }
+    setApiKeyInput(apiKey || "");
   }, [apiKey]);
 
   const handleToggleChat = () => {
