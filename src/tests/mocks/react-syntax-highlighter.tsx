@@ -3,7 +3,6 @@ import React from "react";
 interface SyntaxHighlighterProps {
   children: string;
   language?: string;
-  style?: unknown;
   PreTag?: string;
   className?: string;
   [key: string]: unknown;
@@ -13,17 +12,19 @@ export const Prism: React.FC<SyntaxHighlighterProps> = ({
   children,
   language,
   className,
+  PreTag,
   ...props
 }) => {
+  const CustomTag = PreTag || "pre";
   return (
-    <pre
+    <CustomTag
       data-testid="syntax-highlighter"
       data-language={language}
       className={className}
       {...props}
     >
       <code>{children}</code>
-    </pre>
+    </CustomTag>
   );
 };
 

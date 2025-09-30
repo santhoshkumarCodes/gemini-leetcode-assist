@@ -17,4 +17,7 @@ module.exports = {
     "^remark-gfm$": "<rootDir>/src/tests/mocks/remark-gfm.ts",
   },
   setupFilesAfterEnv: ["<rootDir>/src/tests/setupTests.ts"],
+  collectCoverage: true,
+  coverageReporters: ["json", "lcov", "text", "clover"],
+  coverageDirectory: "coverage",
 };

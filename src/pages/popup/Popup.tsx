@@ -22,7 +22,13 @@ const Popup: FC = () => {
   const handleToggleChat = () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0] && tabs[0].id) {
-        chrome.tabs.sendMessage(tabs[0].id, { type: "TOGGLE_CHAT" });
+        chrome.tabs.sendMessage(tabs[0].id, { type: "TOGGLE_CHAT" }, () => {
+          if (chrome.runtime.lastError) {
+            console.error(
+              `Popup: Could not send TOGGLE_CHAT message: ${chrome.runtime.lastError.message}`,
+            );
+          }
+        });
         dispatch(toggleChat());
       } else {
         console.error("Popup: Could not get active tab ID");

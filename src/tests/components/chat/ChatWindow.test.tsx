@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import configureStore from "redux-mock-store";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { thunk } from "redux-thunk";
+import { toggleChat, toggleMinimize } from "@/state/slices/uiSlice";
 
 const mockStore = configureStore([thunk]);
 
@@ -32,8 +33,8 @@ describe("ChatWindow", () => {
     const state = createMockState({
       chat: {
         messages: [
-          { text: "User message", isUser: true },
-          { text: "Bot message", isUser: false },
+          { id: "1", text: "User message", isUser: true },
+          { id: "2", text: "Bot message", isUser: false },
         ],
       },
     });
@@ -144,5 +145,29 @@ describe("ChatWindow", () => {
         "Please set your Gemini API key in the extension settings.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("should dispatch toggleMinimize when minimize button is clicked", () => {
+    const store = mockStore(createMockState());
+    render(
+      <Provider store={store}>
+        <ChatWindow />
+      </Provider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Minimize/i }));
+    expect(store.getActions()).toContainEqual(toggleMinimize());
+  });
+
+  it("should dispatch toggleChat when close button is clicked", () => {
+    const store = mockStore(createMockState());
+    render(
+      <Provider store={store}>
+        <ChatWindow />
+      </Provider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Close/i }));
+    expect(store.getActions()).toContainEqual(toggleChat());
   });
 });

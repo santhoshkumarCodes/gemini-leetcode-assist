@@ -97,6 +97,7 @@ const ChatWindow: FC = () => {
                 <button
                   onClick={() => dispatch(toggleMinimize())}
                   className="hover:bg-white/20 p-1 rounded"
+                  aria-label="Minimize"
                 >
                   {isChatMinimized ? (
                     <Maximize2 size={16} />
@@ -107,6 +108,7 @@ const ChatWindow: FC = () => {
                 <button
                   onClick={() => dispatch(toggleChat())}
                   className="hover:bg-red-500/50 p-1 rounded"
+                  aria-label="Close"
                 >
                   <X size={16} />
                 </button>
@@ -138,9 +140,9 @@ const ChatWindow: FC = () => {
                     </div>
                   ) : (
                     <>
-                      {messages.map((msg, index) => (
+                      {messages.map((msg) => (
                         <ChatMessage
-                          key={index}
+                          key={msg.id}
                           text={msg.text}
                           isUser={msg.isUser}
                         />

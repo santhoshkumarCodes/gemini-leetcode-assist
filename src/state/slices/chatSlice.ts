@@ -1,7 +1,8 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction, nanoid } from "@reduxjs/toolkit";
 
 export interface ChatState {
   messages: {
+    id: string;
     text: string;
     isUser: boolean;
   }[];
@@ -19,7 +20,7 @@ const chatSlice = createSlice({
       state,
       action: PayloadAction<{ text: string; isUser: boolean }>,
     ) => {
-      state.messages.push(action.payload);
+      state.messages.push({ ...action.payload, id: nanoid() });
     },
   },
 });
