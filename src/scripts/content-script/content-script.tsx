@@ -1,4 +1,9 @@
+import "@/index.css";
 import { parseLeetCodeProblem } from "./parser";
+import store from "@/state/store";
+import { toggleChat } from "@/state/slices/uiSlice";
+import { createRoot } from "react-dom/client";
+import Injection from "@/components/Injection";
 
 // --- State Management ---
 let problemDetails: Awaited<ReturnType<typeof parseLeetCodeProblem>> | null =
@@ -52,6 +57,19 @@ window.addEventListener(
   false,
 );
 
+// 4. Inject the React component
+const root = document.createElement("div");
+root.id = "gemini-chat-root";
+root.style.position = "fixed";
+root.style.top = "0";
+root.style.left = "0";
+root.style.width = "100vw";
+root.style.height = "100vh";
+root.style.zIndex = "9999";
+root.style.pointerEvents = "none"; // Allow clicks to pass through the container
+document.body.appendChild(root);
+createRoot(root).render(<Injection />);
+
 // 3. Parse the static problem details from the DOM
 parseLeetCodeProblem()
   .then((details) => {
@@ -64,3 +82,10 @@ parseLeetCodeProblem()
   .catch((error) => {
     console.error("Failed to parse LeetCode problem details:", error);
   });
+
+// 5. Listen for messages from the popup
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === "TOGGLE_CHAT") {
+    store.dispatch(toggleChat());
+  }
+});

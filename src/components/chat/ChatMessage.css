@@ -1,0 +1,71 @@
+/* ChatMessage.css */
+.markdown-container {
+  font-size: clamp(12px, 2.5cqw, 16px);
+}
+
+.markdown-container h1,
+.markdown-container h2,
+.markdown-container h3,
+.markdown-container h4,
+.markdown-container h5,
+.markdown-container h6 {
+  font-weight: bold;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-container h1 {
+  font-size: 1.25rem;
+}
+
+.markdown-container h2 {
+  font-size: 1.1rem;
+}
+
+.markdown-container h3 {
+  font-size: 1rem;
+}
+
+.markdown-container ul,
+.markdown-container ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-container pre,
+.markdown-container code {
+  font-size: inherit;
+}
+
+.markdown-container li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-container p {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-container a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.markdown-container a:hover {
+  text-decoration: underline;
+}
+
+.markdown-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.markdown-container th,
+.markdown-container td {
+  border: 1px solid #4b5563;
+  padding: 0.5rem;
+}
+
+.markdown-container th {
+  background-color: #374151;
+}

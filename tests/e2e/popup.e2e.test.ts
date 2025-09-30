@@ -1,5 +1,9 @@
 import puppeteer, { Browser, Page } from "puppeteer";
 import * as path from "path";
+import * as fs from "fs";
+
+// Give these E2E tests more time on slower machines or CI
+jest.setTimeout(120000);
 
 describe("E2E Tests", () => {
   let browser: Browser;
@@ -8,6 +12,11 @@ describe("E2E Tests", () => {
 
   beforeAll(async () => {
     const extensionPath = path.resolve(__dirname, "../../dist");
+    if (!fs.existsSync(extensionPath)) {
+      throw new Error(
+        `Extension build not found at ${extensionPath}. Run 'npm run build' before running E2E tests.`,
+      );
+    }
     browser = await puppeteer.launch({
       headless: false,
       args: [
@@ -23,7 +32,7 @@ describe("E2E Tests", () => {
     page = await browser.newPage();
     const extensionTarget = await browser.waitForTarget(
       (target) => target.type() === "service_worker",
-      { timeout: 10000 },
+      { timeout: 30000 },
     );
     serviceWorker = await extensionTarget.worker();
     await new Promise((resolve) => setTimeout(resolve, 2000));
