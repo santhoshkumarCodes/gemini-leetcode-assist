@@ -1,12 +1,21 @@
-import chatReducer, { addMessage, ChatState } from "@/state/slices/chatSlice";
+import chatReducer, {
+  addMessage,
+  addContext,
+  removeContext,
+  ChatState,
+} from "@/state/slices/chatSlice";
 
 const initialState: ChatState = {
   messages: [],
+  selectedContexts: ["Problem Details", "Code"],
 };
 
 describe("chatSlice", () => {
   it("should return the initial state", () => {
-    expect(chatReducer(undefined, { type: "unknown" })).toEqual(initialState);
+    expect(chatReducer(undefined, { type: "unknown" })).toEqual({
+      messages: [],
+      selectedContexts: ["Problem Details", "Code"],
+    });
   });
 
   it("should handle addMessage", () => {
@@ -22,5 +31,24 @@ describe("chatSlice", () => {
     expect(state.messages.length).toBe(2);
     expect(state.messages[1].text).toBe("Hi");
     expect(state.messages[1].isUser).toBe(false);
+  });
+
+  it("should handle addContext", () => {
+    const state = chatReducer(initialState, addContext("New Context"));
+    expect(state.selectedContexts).toEqual([
+      "Problem Details",
+      "Code",
+      "New Context",
+    ]);
+  });
+
+  it("should not add a context if it already exists", () => {
+    const state = chatReducer(initialState, addContext("Code"));
+    expect(state.selectedContexts).toEqual(["Problem Details", "Code"]);
+  });
+
+  it("should handle removeContext", () => {
+    const state = chatReducer(initialState, removeContext("Code"));
+    expect(state.selectedContexts).toEqual(["Problem Details"]);
   });
 });

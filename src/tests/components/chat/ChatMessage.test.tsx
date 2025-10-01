@@ -3,15 +3,21 @@ import ChatMessage from "@/components/chat/ChatMessage";
 
 describe("ChatMessage", () => {
   it("renders a user message correctly", () => {
-    render(<ChatMessage text="Hello, world!" isUser={true} />);
+    const { container } = render(
+      <ChatMessage text="Hello, world!" isUser={true} />,
+    );
     const messageElement = screen.getByText("Hello, world!");
     expect(messageElement).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass("user-message", "mb-4");
   });
 
   it("renders a bot message correctly", () => {
-    render(<ChatMessage text="Hi there!" isUser={false} />);
+    const { container } = render(
+      <ChatMessage text="Hi there!" isUser={false} />,
+    );
     const messageElement = screen.getByText("Hi there!");
     expect(messageElement).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass("bot-message", "mb-4");
   });
 
   it("renders a code block with a language", () => {

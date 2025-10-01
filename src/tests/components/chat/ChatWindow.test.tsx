@@ -1,35 +1,90 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import { Provider } from "react-redux";
 import configureStore from "redux-mock-store";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { thunk } from "redux-thunk";
 import { toggleChat, toggleMinimize } from "@/state/slices/uiSlice";
+import * as gemini from "@/utils/gemini";
 
 const mockStore = configureStore([thunk]);
 
 // Helper function to create a complete mock state
-const createMockState = (overrides = {}) => ({
-  chat: {
-    messages: [],
-  },
-  ui: {
+type MockStateOverrides = Partial<{
+  chat: Partial<{
+    messages: Array<{ id: string; text: string; isUser: boolean }>;
+    selectedContexts: string[];
+  }>;
+  ui: Partial<{
+    isChatOpen: boolean;
+    isChatMinimized: boolean;
+    chatPosition: { x: number; y: number };
+    chatSize: { width: number; height: number };
+    isContextOpen: boolean;
+    isModelMenuOpen: boolean;
+  }>;
+  settings: Partial<{
+    apiKey: string | null;
+    selectedModel: string;
+  }>;
+  api: Partial<{
+    isLoading: boolean;
+    error: string | null;
+  }>;
+  [key: string]: unknown;
+}>;
+
+const createMockState = (overrides: MockStateOverrides = {}) => {
+  const defaultChat = { messages: [], selectedContexts: [] };
+  const defaultUi = {
     isChatOpen: true,
     isChatMinimized: false,
     chatPosition: { x: 50, y: 50 },
     chatSize: { width: 400, height: 600 },
-  },
-  settings: {
+    isContextOpen: false,
+    isModelMenuOpen: false,
+  };
+  const defaultSettings = {
     apiKey: "test-api-key",
-  },
-  api: {
-    isLoading: false,
-    error: null,
-  },
-  ...overrides,
-});
+    selectedModel: "Gemini 2.5 Pro",
+  };
+  const defaultApi = { isLoading: false, error: null };
+
+  return {
+    chat: { ...defaultChat, ...(overrides.chat || {}) },
+    ui: { ...defaultUi, ...(overrides.ui || {}) },
+    settings: { ...defaultSettings, ...(overrides.settings || {}) },
+    api: { ...defaultApi, ...(overrides.api || {}) },
+    ...Object.fromEntries(
+      Object.entries(overrides).filter(
+        ([k]) => !["chat", "ui", "settings", "api"].includes(k),
+      ),
+    ),
+  };
+};
 
 describe("ChatWindow", () => {
-  it("renders chat messages", () => {
+  beforeEach(() => {
+    global.chrome = {
+      storage: {
+        local: {
+          get: jest.fn().mockResolvedValue({}),
+        } as unknown as typeof chrome.storage.local,
+      },
+    } as unknown as typeof chrome;
+    // ensure window.pathname contains a problem slug used by the component logic
+    // use history.pushState to avoid redefining window.location
+    window.history.pushState({}, "", "/problems/two-sum/");
+
+    jest.spyOn(gemini, "callGeminiApi").mockResolvedValue("Bot response");
+  });
+
+  it("renders chat messages", async () => {
     const state = createMockState({
       chat: {
         messages: [
@@ -46,17 +101,14 @@ describe("ChatWindow", () => {
       </Provider>,
     );
 
-    expect(screen.getByText("User message")).toBeInTheDocument();
-    expect(screen.getByText("Bot message")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("User message")).toBeInTheDocument();
+      expect(screen.getByText("Bot message")).toBeInTheDocument();
+    });
   });
 
-  it("displays a welcome message when there are no messages", () => {
-    const state = createMockState({
-      chat: {
-        messages: [],
-      },
-    });
-    const store = mockStore(state);
+  it("displays a welcome message when there are no messages", async () => {
+    const store = mockStore(createMockState());
 
     render(
       <Provider store={store}>
@@ -64,13 +116,81 @@ describe("ChatWindow", () => {
       </Provider>,
     );
 
-    expect(screen.getByText("Hello, LeetCoder")).toBeInTheDocument();
+    expect(await screen.findByText("Hello, LeetCoder")).toBeInTheDocument();
+    // The welcome text may include the prettified problem title derived from the URL
+    // (the DOM may split text across nodes), so match flexibly by checking both
+    // the helper phrase and the problem title are present in the same element.
     expect(
-      screen.getByText("How can I assist you with Two Sum problem?"),
+      await screen.findByText(
+        (content) =>
+          content.includes("How can I assist you with") &&
+          content.includes("Two Sum"),
+      ),
     ).toBeInTheDocument();
   });
 
-  it("displays loading indicator when isLoading is true", () => {
+  it("displays a welcome message with the problem title", async () => {
+    (chrome.storage.local.get as jest.Mock).mockResolvedValue({
+      "leetcode-problem-two-sum": {
+        title: "1. Two Sum",
+      },
+    });
+
+    const store = mockStore(createMockState());
+
+    render(
+      <Provider store={store}>
+        <ChatWindow />
+      </Provider>,
+    );
+
+    expect(
+      await screen.findByText("How can I assist you with Two Sum problem?"),
+    ).toBeInTheDocument();
+  });
+
+  it("sends context with the message", async () => {
+    (chrome.storage.local.get as jest.Mock).mockResolvedValue({
+      "leetcode-problem-two-sum": {
+        title: "1. Two Sum",
+        description: "<p>Problem description</p>",
+        code: "class Solution {}",
+      },
+    });
+
+    const store = mockStore(
+      createMockState({
+        chat: { selectedContexts: ["Problem Details", "Code"] },
+      }),
+    );
+
+    render(
+      <Provider store={store}>
+        <ChatWindow />
+      </Provider>,
+    );
+
+    const input = screen.getByRole("textbox");
+    const sendButton = screen.getByRole("button", { name: /Send/i });
+
+    fireEvent.change(input, { target: { value: "My message" } });
+    fireEvent.click(sendButton);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(gemini.callGeminiApi).toHaveBeenCalledWith(
+      "test-api-key",
+      expect.stringContaining("### Problem: 1. Two Sum"),
+    );
+    expect(gemini.callGeminiApi).toHaveBeenCalledWith(
+      "test-api-key",
+      expect.stringContaining("My message"),
+    );
+  });
+
+  it("displays loading indicator when isLoading is true", async () => {
     const state = createMockState({
       api: {
         isLoading: true,
@@ -85,10 +205,10 @@ describe("ChatWindow", () => {
       </Provider>,
     );
 
-    expect(screen.getByText("...")).toBeInTheDocument();
+    expect(await screen.findByText("...")).toBeInTheDocument();
   });
 
-  it("displays error message when there is an error", () => {
+  it("displays error message when there is an error", async () => {
     const state = createMockState({
       api: {
         isLoading: false,
@@ -103,7 +223,7 @@ describe("ChatWindow", () => {
       </Provider>,
     );
 
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
   });
 
   it("does not render when chat is closed", () => {
@@ -126,7 +246,7 @@ describe("ChatWindow", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("shows API key message when apiKey is not set", () => {
+  it("shows API key message when apiKey is not set", async () => {
     const state = createMockState({
       settings: {
         apiKey: null,
@@ -141,13 +261,13 @@ describe("ChatWindow", () => {
     );
 
     expect(
-      screen.getByText(
+      await screen.findByText(
         "Please set your Gemini API key in the extension settings.",
       ),
     ).toBeInTheDocument();
   });
 
-  it("should dispatch toggleMinimize when minimize button is clicked", () => {
+  it("should dispatch toggleMinimize when minimize button is clicked", async () => {
     const store = mockStore(createMockState());
     render(
       <Provider store={store}>
@@ -155,11 +275,11 @@ describe("ChatWindow", () => {
       </Provider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Minimize/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Minimize/i }));
     expect(store.getActions()).toContainEqual(toggleMinimize());
   });
 
-  it("should dispatch toggleChat when close button is clicked", () => {
+  it("should dispatch toggleChat when close button is clicked", async () => {
     const store = mockStore(createMockState());
     render(
       <Provider store={store}>
@@ -167,7 +287,7 @@ describe("ChatWindow", () => {
       </Provider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Close/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /Close/i }));
     expect(store.getActions()).toContainEqual(toggleChat());
   });
 });

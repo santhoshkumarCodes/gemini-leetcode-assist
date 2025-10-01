@@ -5,6 +5,8 @@ export interface UIState {
   isChatMinimized: boolean;
   chatPosition: { x: number; y: number };
   chatSize: { width: number; height: number };
+  isContextOpen: boolean;
+  isModelMenuOpen: boolean;
 }
 
 const initialState: UIState = {
@@ -12,6 +14,8 @@ const initialState: UIState = {
   isChatMinimized: false,
   chatPosition: { x: 50, y: 50 },
   chatSize: { width: 400, height: 600 },
+  isContextOpen: false,
+  isModelMenuOpen: false,
 };
 
 const uiSlice = createSlice({
@@ -36,9 +40,21 @@ const uiSlice = createSlice({
     ) => {
       state.chatSize = action.payload;
     },
+    setContextOpen: (state, action: PayloadAction<boolean>) => {
+      state.isContextOpen = action.payload;
+    },
+    setModelMenuOpen: (state, action: PayloadAction<boolean>) => {
+      state.isModelMenuOpen = action.payload;
+    },
   },
 });
 
-export const { toggleChat, toggleMinimize, setChatPosition, setChatSize } =
-  uiSlice.actions;
+export const {
+  toggleChat,
+  toggleMinimize,
+  setChatPosition,
+  setChatSize,
+  setContextOpen,
+  setModelMenuOpen,
+} = uiSlice.actions;
 export default uiSlice.reducer;

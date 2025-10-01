@@ -3,6 +3,8 @@ import uiReducer, {
   toggleMinimize,
   setChatPosition,
   setChatSize,
+  setContextOpen,
+  setModelMenuOpen,
   UIState,
 } from "@/state/slices/uiSlice";
 
@@ -11,6 +13,8 @@ const initialState: UIState = {
   isChatMinimized: false,
   chatPosition: { x: 50, y: 50 },
   chatSize: { width: 400, height: 600 },
+  isContextOpen: false,
+  isModelMenuOpen: false,
 };
 
 describe("uiSlice", () => {
@@ -38,5 +42,15 @@ describe("uiSlice", () => {
     const newSize = { width: 500, height: 700 };
     const actual = uiReducer(initialState, setChatSize(newSize));
     expect(actual.chatSize).toEqual(newSize);
+  });
+
+  it("should handle setContextOpen", () => {
+    const actual = uiReducer(initialState, setContextOpen(true));
+    expect(actual.isContextOpen).toBe(true);
+  });
+
+  it("should handle setModelMenuOpen", () => {
+    const actual = uiReducer(initialState, setModelMenuOpen(true));
+    expect(actual.isModelMenuOpen).toBe(true);
   });
 });

@@ -6,10 +6,12 @@ export interface ChatState {
     text: string;
     isUser: boolean;
   }[];
+  selectedContexts: string[];
 }
 
 const initialState: ChatState = {
   messages: [],
+  selectedContexts: ["Problem Details", "Code"],
 };
 
 const chatSlice = createSlice({
@@ -22,8 +24,18 @@ const chatSlice = createSlice({
     ) => {
       state.messages.push({ ...action.payload, id: nanoid() });
     },
+    addContext: (state, action: PayloadAction<string>) => {
+      if (!state.selectedContexts.includes(action.payload)) {
+        state.selectedContexts.push(action.payload);
+      }
+    },
+    removeContext: (state, action: PayloadAction<string>) => {
+      state.selectedContexts = state.selectedContexts.filter(
+        (context) => context !== action.payload,
+      );
+    },
   },
 });
 
-export const { addMessage } = chatSlice.actions;
+export const { addMessage, addContext, removeContext } = chatSlice.actions;
 export default chatSlice.reducer;
