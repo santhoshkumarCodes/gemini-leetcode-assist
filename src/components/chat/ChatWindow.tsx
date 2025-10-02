@@ -49,7 +49,7 @@ const ChatWindow: FC = () => {
             const cleaned = String(problemData.title)
               .replace(/^\s*\d+\.\s*/, "")
               .trim();
-            setTimeout(() => setProblemTitle(cleaned), 0);
+            setProblemTitle(cleaned);
             return;
           }
 
@@ -65,7 +65,7 @@ const ChatWindow: FC = () => {
               })
               .join(" ");
 
-          setTimeout(() => setProblemTitle(prettify(problemSlug)), 0);
+          setProblemTitle(prettify(problemSlug));
         }
       } catch (e) {
         console.error("Error loading problem title:", e);

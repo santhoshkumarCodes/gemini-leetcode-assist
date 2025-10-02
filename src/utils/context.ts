@@ -89,13 +89,7 @@ export function formatProblemContext(
   }
 
   if (selectedContexts.includes("Code")) {
-    context += `#### Code\n\
-\
-${code}\n\
-\
-\
-\
-`;
+    context += `#### Code\n\`\`\`\n${code}\n\`\`\`\n\n`;
   }
   return context;
 }

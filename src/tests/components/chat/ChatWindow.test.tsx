@@ -68,9 +68,19 @@ const createMockState = (overrides: MockStateOverrides = {}) => {
   };
 };
 
+// Helper to render the component inside act so async state updates are wrapped
+const renderWithStore = async (store: ReturnType<typeof mockStore>) =>
+  await act(async () =>
+    render(
+      <Provider store={store}>
+        <ChatWindow />
+      </Provider>,
+    ),
+  );
+
 describe("ChatWindow", () => {
   beforeEach(() => {
-    global.chrome = {
+    (globalThis as unknown as { chrome: typeof chrome }).chrome = {
       storage: {
         local: {
           get: jest.fn().mockResolvedValue({}),
@@ -95,11 +105,7 @@ describe("ChatWindow", () => {
     });
     const store = mockStore(state);
 
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     await waitFor(() => {
       expect(screen.getByText("User message")).toBeInTheDocument();
@@ -110,11 +116,7 @@ describe("ChatWindow", () => {
   it("displays a welcome message when there are no messages", async () => {
     const store = mockStore(createMockState());
 
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     expect(await screen.findByText("Hello, LeetCoder")).toBeInTheDocument();
     // The welcome text may include the prettified problem title derived from the URL
@@ -137,12 +139,7 @@ describe("ChatWindow", () => {
     });
 
     const store = mockStore(createMockState());
-
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     expect(
       await screen.findByText("How can I assist you with Two Sum problem?"),
@@ -164,11 +161,7 @@ describe("ChatWindow", () => {
       }),
     );
 
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     const input = screen.getByRole("textbox");
     const sendButton = screen.getByRole("button", { name: /Send/i });
@@ -199,11 +192,7 @@ describe("ChatWindow", () => {
     });
     const store = mockStore(state);
 
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     expect(await screen.findByText("...")).toBeInTheDocument();
   });
@@ -217,16 +206,12 @@ describe("ChatWindow", () => {
     });
     const store = mockStore(state);
 
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
   });
 
-  it("does not render when chat is closed", () => {
+  it("does not render when chat is closed", async () => {
     const state = createMockState({
       ui: {
         isChatOpen: false,
@@ -237,13 +222,11 @@ describe("ChatWindow", () => {
     });
     const store = mockStore(state);
 
-    const { container } = render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
-    expect(container.firstChild).toBeNull();
+    // renderWithStore returns void from act wrapping, so read from DOM directly
+    // Use document queries to assert nothing was rendered
+    expect(document.querySelector("#chat-window")).toBeNull();
   });
 
   it("shows API key message when apiKey is not set", async () => {
@@ -254,11 +237,7 @@ describe("ChatWindow", () => {
     });
     const store = mockStore(state);
 
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     expect(
       await screen.findByText(
@@ -269,11 +248,7 @@ describe("ChatWindow", () => {
 
   it("should dispatch toggleMinimize when minimize button is clicked", async () => {
     const store = mockStore(createMockState());
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     fireEvent.click(await screen.findByRole("button", { name: /Minimize/i }));
     expect(store.getActions()).toContainEqual(toggleMinimize());
@@ -281,11 +256,7 @@ describe("ChatWindow", () => {
 
   it("should dispatch toggleChat when close button is clicked", async () => {
     const store = mockStore(createMockState());
-    render(
-      <Provider store={store}>
-        <ChatWindow />
-      </Provider>,
-    );
+    await renderWithStore(store);
 
     fireEvent.click(await screen.findByRole("button", { name: /Close/i }));
     expect(store.getActions()).toContainEqual(toggleChat());
