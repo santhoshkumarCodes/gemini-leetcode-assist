@@ -1,5 +1,6 @@
 import settingsReducer, {
   setApiKey,
+  setSelectedModel,
   loadApiKey,
   saveApiKey,
   SettingsState,
@@ -8,6 +9,7 @@ import { configureStore } from "@reduxjs/toolkit";
 
 const initialState: SettingsState = {
   apiKey: null,
+  selectedModel: "Gemini 2.5 Pro",
 };
 
 describe("settingsSlice", () => {
@@ -32,6 +34,12 @@ describe("settingsSlice", () => {
     const apiKey = "test-api-key";
     const actual = settingsReducer(initialState, setApiKey(apiKey));
     expect(actual.apiKey).toBe(apiKey);
+  });
+
+  it("should handle setSelectedModel", () => {
+    const model = "Gemini 2.5 Flash";
+    const actual = settingsReducer(initialState, setSelectedModel(model));
+    expect(actual.selectedModel).toBe(model);
   });
 
   describe("loadApiKey thunk", () => {

@@ -22,10 +22,12 @@ export const saveApiKey = createAsyncThunk(
 
 export interface SettingsState {
   apiKey: string | null;
+  selectedModel: string;
 }
 
 const initialState: SettingsState = {
   apiKey: null,
+  selectedModel: "Gemini 2.5 Pro",
 };
 
 const settingsSlice = createSlice({
@@ -35,8 +37,11 @@ const settingsSlice = createSlice({
     setApiKey: (state, action: PayloadAction<string | null>) => {
       state.apiKey = action.payload;
     },
+    setSelectedModel: (state, action: PayloadAction<string>) => {
+      state.selectedModel = action.payload;
+    },
   },
 });
 
-export const { setApiKey } = settingsSlice.actions;
+export const { setApiKey, setSelectedModel } = settingsSlice.actions;
 export default settingsSlice.reducer;

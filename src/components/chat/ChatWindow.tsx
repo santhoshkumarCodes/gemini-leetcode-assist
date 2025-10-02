@@ -1,4 +1,4 @@
-import { FC, useRef, useEffect } from "react";
+import { FC, useRef, useEffect, useState } from "react";
 import Draggable from "react-draggable";
 import { Resizable } from "react-resizable";
 import { useSelector, useDispatch } from "react-redux";
@@ -16,6 +16,7 @@ import { setLoading, setError, clearError } from "@/state/slices/apiSlice";
 import { callGeminiApi } from "@/utils/gemini";
 import { loadApiKey } from "@/state/slices/settingsSlice";
 import { X, Minus, Bot, Maximize2 } from "lucide-react";
+import { formatProblemContext } from "@/utils/context";
 
 const ChatWindow: FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -23,7 +24,9 @@ const ChatWindow: FC = () => {
   const { isChatOpen, isChatMinimized, chatPosition, chatSize } = useSelector(
     (state: RootState) => state.ui,
   );
-  const { messages } = useSelector((state: RootState) => state.chat);
+  const { messages, selectedContexts } = useSelector(
+    (state: RootState) => state.chat,
+  );
   const { apiKey } = useSelector((state: RootState) => state.settings);
   const { isLoading, error } = useSelector((state: RootState) => state.api);
 
@@ -31,16 +34,77 @@ const ChatWindow: FC = () => {
     dispatch(loadApiKey());
   }, [dispatch]);
 
+  const [problemTitle, setProblemTitle] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProblemTitle = async () => {
+      try {
+        const problemSlug = window.location.pathname.split("/")[2];
+        if (problemSlug) {
+          const key = `leetcode-problem-${problemSlug}`;
+          const result = await chrome.storage.local.get(key);
+          const problemData = result[key];
+          if (problemData && problemData.title) {
+            // Remove leading numbering like "1. " or "12. " from titles
+            const cleaned = String(problemData.title)
+              .replace(/^\s*\d+\.\s*/, "")
+              .trim();
+            setProblemTitle(cleaned);
+            return;
+          }
+
+          // Fallback: prettify slug into a readable title
+          const prettify = (s: string) =>
+            s
+              .replace(/[_-]+/g, " ")
+              .split(" ")
+              .filter(Boolean)
+              .map((w) => {
+                const lower = w.toLowerCase();
+                return lower.charAt(0).toUpperCase() + lower.slice(1);
+              })
+              .join(" ");
+
+          setProblemTitle(prettify(problemSlug));
+        }
+      } catch (e) {
+        console.error("Error loading problem title:", e);
+      }
+    };
+
+    loadProblemTitle();
+  }, []);
+
   const handleSendMessage = async (text: string) => {
     dispatch(clearError());
     if (!apiKey) {
       dispatch(setError("API key not set."));
       return;
     }
-    dispatch(addMessage({ text, isUser: true }));
+
+    let messageToSend = text;
+    if (selectedContexts.length > 0) {
+      try {
+        const problemSlug = window.location.pathname.split("/")[2];
+        if (problemSlug) {
+          const key = `leetcode-problem-${problemSlug}`;
+          const result = await chrome.storage.local.get(key);
+          const problemData = result[key];
+
+          if (problemData) {
+            const context = formatProblemContext(problemData, selectedContexts);
+            messageToSend = `${context}\n${text}`;
+          }
+        }
+      } catch (e) {
+        console.error("Error getting context:", e);
+      }
+    }
+
+    dispatch(addMessage({ text: text, isUser: true })); // Show original text in chat
     dispatch(setLoading(true));
     try {
-      const response = await callGeminiApi(apiKey, text);
+      const response = await callGeminiApi(apiKey, messageToSend); // Send context to API
       dispatch(addMessage({ text: response, isUser: false }));
     } catch (error) {
       dispatch(setError((error as Error).message));
@@ -66,8 +130,13 @@ const ChatWindow: FC = () => {
         <Resizable
           width={chatSize.width}
           height={isChatMinimized ? 40 : chatSize.height}
-          onResize={(_, { size }) => {
-            dispatch(setChatSize({ width: size.width, height: size.height }));
+          onResize={(
+            _event: React.SyntheticEvent,
+            data: { size: { width: number; height: number } },
+          ) => {
+            dispatch(
+              setChatSize({ width: data.size.width, height: data.size.height }),
+            );
           }}
           minConstraints={isChatMinimized ? [300, 40] : [300, 200]}
           maxConstraints={[800, 1000]}
@@ -134,7 +203,11 @@ const ChatWindow: FC = () => {
                       </h2>
                       <h1>
                         <span className="text-white/70">
-                          How can I assist you with Two Sum problem?
+                          How can I assist you with{" "}
+                          {problemTitle
+                            ? `${problemTitle} problem`
+                            : "this problem"}
+                          ?
                         </span>
                       </h1>
                     </div>

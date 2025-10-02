@@ -19,6 +19,7 @@ describe("E2E Tests", () => {
     }
     browser = await puppeteer.launch({
       headless: false,
+      defaultViewport: { width: 1920, height: 1080 },
       args: [
         `--disable-extensions-except=${extensionPath}`,
         `--load-extension=${extensionPath}`,
@@ -27,6 +28,7 @@ describe("E2E Tests", () => {
         "--disable-gpu",
         "--disable-accelerated-2d-canvas",
         "--disable-dev-shm-usage",
+        "--window-size=1920,1080",
       ],
     });
     page = await browser.newPage();
