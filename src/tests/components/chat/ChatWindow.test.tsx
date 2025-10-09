@@ -36,6 +36,9 @@ type MockStateOverrides = Partial<{
     isLoading: boolean;
     error: string | null;
   }>;
+  problem: Partial<{
+    currentProblemSlug: string | null;
+  }>;
   [key: string]: unknown;
 }>;
 
@@ -54,15 +57,17 @@ const createMockState = (overrides: MockStateOverrides = {}) => {
     selectedModel: "Gemini 2.5 Pro",
   };
   const defaultApi = { isLoading: false, error: null };
+  const defaultProblem = { currentProblemSlug: "two-sum" };
 
   return {
     chat: { ...defaultChat, ...(overrides.chat || {}) },
     ui: { ...defaultUi, ...(overrides.ui || {}) },
     settings: { ...defaultSettings, ...(overrides.settings || {}) },
     api: { ...defaultApi, ...(overrides.api || {}) },
+    problem: { ...defaultProblem, ...(overrides.problem || {}) },
     ...Object.fromEntries(
       Object.entries(overrides).filter(
-        ([k]) => !["chat", "ui", "settings", "api"].includes(k),
+        ([k]) => !["chat", "ui", "settings", "api", "problem"].includes(k),
       ),
     ),
   };

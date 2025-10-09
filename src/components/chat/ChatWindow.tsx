@@ -29,6 +29,9 @@ const ChatWindow: FC = () => {
   );
   const { apiKey } = useSelector((state: RootState) => state.settings);
   const { isLoading, error } = useSelector((state: RootState) => state.api);
+  const { currentProblemSlug } = useSelector(
+    (state: RootState) => state.problem,
+  );
 
   useEffect(() => {
     dispatch(loadApiKey());
@@ -39,9 +42,8 @@ const ChatWindow: FC = () => {
   useEffect(() => {
     const loadProblemTitle = async () => {
       try {
-        const problemSlug = window.location.pathname.split("/")[2];
-        if (problemSlug) {
-          const key = `leetcode-problem-${problemSlug}`;
+        if (currentProblemSlug) {
+          const key = `leetcode-problem-${currentProblemSlug}`;
           const result = await chrome.storage.local.get(key);
           const problemData = result[key];
           if (problemData && problemData.title) {
@@ -65,7 +67,7 @@ const ChatWindow: FC = () => {
               })
               .join(" ");
 
-          setProblemTitle(prettify(problemSlug));
+          setProblemTitle(prettify(currentProblemSlug));
         }
       } catch (e) {
         console.error("Error loading problem title:", e);
@@ -73,7 +75,7 @@ const ChatWindow: FC = () => {
     };
 
     loadProblemTitle();
-  }, []);
+  }, [currentProblemSlug]);
 
   const handleSendMessage = async (text: string) => {
     dispatch(clearError());
@@ -85,9 +87,8 @@ const ChatWindow: FC = () => {
     let messageToSend = text;
     if (selectedContexts.length > 0) {
       try {
-        const problemSlug = window.location.pathname.split("/")[2];
-        if (problemSlug) {
-          const key = `leetcode-problem-${problemSlug}`;
+        if (currentProblemSlug) {
+          const key = `leetcode-problem-${currentProblemSlug}`;
           const result = await chrome.storage.local.get(key);
           const problemData = result[key];
 

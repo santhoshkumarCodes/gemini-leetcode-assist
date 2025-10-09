@@ -4,6 +4,7 @@ import store from "@/state/store";
 import { toggleChat } from "@/state/slices/uiSlice";
 import { createRoot } from "react-dom/client";
 import Injection from "@/components/Injection";
+import { setProblemSlug } from "@/state/slices/problemSlice";
 
 // --- State Management ---
 let problemDetails: Awaited<ReturnType<typeof parseLeetCodeProblem>> | null =
@@ -71,17 +72,49 @@ document.body.appendChild(root);
 createRoot(root).render(<Injection />);
 
 // 3. Parse the static problem details from the DOM
-parseLeetCodeProblem()
-  .then((details) => {
-    problemDetails = details;
-    // If we have already received code, send the first unified update now
-    if (lastSentCode !== null) {
-      sendUnifiedUpdate(lastSentCode);
+function handleProblemChange() {
+  const problemSlug = window.location.pathname.split("/")[2];
+  if (problemSlug) {
+    store.dispatch(setProblemSlug(problemSlug));
+  }
+
+  parseLeetCodeProblem()
+    .then((details) => {
+      if (details.title !== problemDetails?.title) {
+        problemDetails = details;
+        // If we have already received code, send the first unified update now
+        if (lastSentCode !== null) {
+          sendUnifiedUpdate(lastSentCode);
+        }
+      }
+    })
+    .catch((error) => {
+      console.error("Failed to parse LeetCode problem details:", error);
+    });
+}
+
+// Initial parse
+handleProblemChange();
+
+// --- Observe for problem changes (client-side navigation) ---
+const observer = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    // Check if nodes were added, and if the title changed
+    if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+      const titleElement = document.querySelector(".text-title-large");
+      if (titleElement && titleElement.textContent !== problemDetails?.title) {
+        handleProblemChange();
+        break; // No need to check other mutations
+      }
     }
-  })
-  .catch((error) => {
-    console.error("Failed to parse LeetCode problem details:", error);
-  });
+  }
+});
+
+// Start observing the body for subtree modifications
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
 
 // 5. Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message) => {
