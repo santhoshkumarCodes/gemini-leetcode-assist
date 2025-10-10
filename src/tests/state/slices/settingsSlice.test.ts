@@ -9,7 +9,7 @@ import { configureStore } from "@reduxjs/toolkit";
 
 const initialState: SettingsState = {
   apiKey: null,
-  selectedModel: "Gemini 2.5 Pro",
+  selectedModel: "gemini-2.5-pro",
 };
 
 describe("settingsSlice", () => {

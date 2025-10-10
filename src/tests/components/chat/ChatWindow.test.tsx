@@ -54,7 +54,7 @@ const createMockState = (overrides: MockStateOverrides = {}) => {
   };
   const defaultSettings = {
     apiKey: "test-api-key",
-    selectedModel: "Gemini 2.5 Pro",
+    selectedModel: "gemini-2.5-pro",
   };
   const defaultApi = { isLoading: false, error: null };
   const defaultProblem = { currentProblemSlug: "two-sum" };
@@ -181,10 +181,12 @@ describe("ChatWindow", () => {
     expect(gemini.callGeminiApi).toHaveBeenCalledWith(
       "test-api-key",
       expect.stringContaining("### Problem: 1. Two Sum"),
+      "gemini-2.5-pro",
     );
     expect(gemini.callGeminiApi).toHaveBeenCalledWith(
       "test-api-key",
       expect.stringContaining("My message"),
+      "gemini-2.5-pro",
     );
   });
 

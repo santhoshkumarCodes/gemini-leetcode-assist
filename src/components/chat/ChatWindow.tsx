@@ -27,7 +27,7 @@ const ChatWindow: FC = () => {
   const { messages, selectedContexts } = useSelector(
     (state: RootState) => state.chat,
   );
-  const { apiKey } = useSelector((state: RootState) => state.settings);
+  const { apiKey, selectedModel } = useSelector((state: RootState) => state.settings);
   const { isLoading, error } = useSelector((state: RootState) => state.api);
   const { currentProblemSlug } = useSelector(
     (state: RootState) => state.problem,
@@ -105,7 +105,7 @@ const ChatWindow: FC = () => {
     dispatch(addMessage({ text: text, isUser: true })); // Show original text in chat
     dispatch(setLoading(true));
     try {
-      const response = await callGeminiApi(apiKey, messageToSend); // Send context to API
+      const response = await callGeminiApi(apiKey, messageToSend, selectedModel); // Send context to API
       dispatch(addMessage({ text: response, isUser: false }));
     } catch (error) {
       dispatch(setError((error as Error).message));

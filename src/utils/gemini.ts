@@ -11,6 +11,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 export const callGeminiApi = async (
   apiKey: string,
   prompt: string,
+  modelName: string,
 ): Promise<string> => {
   if (!apiKey || typeof apiKey !== "string") {
     throw new Error("Invalid API key provided.");
@@ -22,7 +23,7 @@ export const callGeminiApi = async (
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
