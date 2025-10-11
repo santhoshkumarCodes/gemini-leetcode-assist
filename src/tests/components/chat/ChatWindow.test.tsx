@@ -11,13 +11,20 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import { thunk } from "redux-thunk";
 import { toggleChat, toggleMinimize } from "@/state/slices/uiSlice";
 import * as gemini from "@/utils/gemini";
+import { loadChats } from "@/state/slices/chatSlice";
+
+jest.mock("@/state/slices/chatSlice", () => ({
+  ...jest.requireActual("@/state/slices/chatSlice"),
+  loadChats: jest.fn(),
+}));
 
 const mockStore = configureStore([thunk]);
 
 // Helper function to create a complete mock state
 type MockStateOverrides = Partial<{
   chat: Partial<{
-    messages: Array<{ id: string; text: string; isUser: boolean }>;
+    chats: Array<{ id: string; messages: Array<{ id: string; text: string; isUser: boolean }> }>;
+    currentChatId: string | null;
     selectedContexts: string[];
   }>;
   ui: Partial<{
@@ -43,7 +50,7 @@ type MockStateOverrides = Partial<{
 }>;
 
 const createMockState = (overrides: MockStateOverrides = {}) => {
-  const defaultChat = { messages: [], selectedContexts: [] };
+  const defaultChat = { chats: [], currentChatId: null, selectedContexts: [] };
   const defaultUi = {
     isChatOpen: true,
     isChatMinimized: false,
@@ -97,15 +104,22 @@ describe("ChatWindow", () => {
     window.history.pushState({}, "", "/problems/two-sum/");
 
     jest.spyOn(gemini, "callGeminiApi").mockResolvedValue("Bot response");
+    (loadChats as jest.Mock).mockReturnValue({ type: "chat/loadChats/mock" });
   });
 
   it("renders chat messages", async () => {
     const state = createMockState({
       chat: {
-        messages: [
-          { id: "1", text: "User message", isUser: true },
-          { id: "2", text: "Bot message", isUser: false },
+        chats: [
+          {
+            id: "chat1",
+            messages: [
+              { id: "1", text: "User message", isUser: true },
+              { id: "2", text: "Bot message", isUser: false },
+            ],
+          },
         ],
+        currentChatId: "chat1",
       },
     });
     const store = mockStore(state);
@@ -151,18 +165,30 @@ describe("ChatWindow", () => {
     ).toBeInTheDocument();
   });
 
+  it("dispatches loadChats on mount if problem slug exists", async () => {
+    const store = mockStore(createMockState());
+    await renderWithStore(store);
+    expect(loadChats).toHaveBeenCalledWith("two-sum");
+  });
+
   it("sends context with the message", async () => {
     (chrome.storage.local.get as jest.Mock).mockResolvedValue({
       "leetcode-problem-two-sum": {
         title: "1. Two Sum",
         description: "<p>Problem description</p>",
+        constraints: "constraints",
+        examples: "examples",
         code: "class Solution {}",
       },
     });
 
     const store = mockStore(
       createMockState({
-        chat: { selectedContexts: ["Problem Details", "Code"] },
+        chat: {
+          chats: [{ id: "chat1", messages: [] }],
+          currentChatId: "chat1",
+          selectedContexts: ["Problem Details", "Code"],
+        },
       }),
     );
 
@@ -178,15 +204,20 @@ describe("ChatWindow", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
+    const expectedProblemDetails = JSON.stringify({
+      title: "1. Two Sum",
+      description: "<p>Problem description</p>",
+      constraints: "constraints",
+      examples: "examples",
+    });
+
     expect(gemini.callGeminiApi).toHaveBeenCalledWith(
       "test-api-key",
-      expect.stringContaining("### Problem: 1. Two Sum"),
       "gemini-2.5-pro",
-    );
-    expect(gemini.callGeminiApi).toHaveBeenCalledWith(
-      "test-api-key",
-      expect.stringContaining("My message"),
-      "gemini-2.5-pro",
+      [],
+      expectedProblemDetails,
+      "class Solution {}",
+      "My message",
     );
   });
 
@@ -237,13 +268,7 @@ describe("ChatWindow", () => {
   });
 
   it("shows API key message when apiKey is not set", async () => {
-    const state = createMockState({
-      settings: {
-        apiKey: null,
-      },
-    });
-    const store = mockStore(state);
-
+    const store = mockStore(createMockState({ settings: { apiKey: null } }));
     await renderWithStore(store);
 
     expect(

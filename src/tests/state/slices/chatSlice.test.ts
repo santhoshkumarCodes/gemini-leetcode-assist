@@ -2,35 +2,61 @@ import chatReducer, {
   addMessage,
   addContext,
   removeContext,
+  setCurrentChat,
+  newChat,
+  loadChats,
   ChatState,
+  Chat,
 } from "@/state/slices/chatSlice";
+import { saveChat, loadChats as loadChatsFromDB } from "@/utils/db";
+
+jest.mock("@/utils/db");
 
 const initialState: ChatState = {
-  messages: [],
+  chats: [],
+  currentChatId: null,
   selectedContexts: ["Problem Details", "Code"],
 };
 
 describe("chatSlice", () => {
-  it("should return the initial state", () => {
-    expect(chatReducer(undefined, { type: "unknown" })).toEqual({
-      messages: [],
-      selectedContexts: ["Problem Details", "Code"],
-    });
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  it("should handle addMessage", () => {
-    const userMessage = { text: "Hello", isUser: true };
-    const botMessage = { text: "Hi", isUser: false };
+  it("should return the initial state", () => {
+    expect(chatReducer(undefined, { type: "unknown" })).toEqual(initialState);
+  });
 
-    let state = chatReducer(initialState, addMessage(userMessage));
-    expect(state.messages.length).toBe(1);
-    expect(state.messages[0].text).toBe("Hello");
-    expect(state.messages[0].isUser).toBe(true);
+  describe("addMessage", () => {
+    it("should add a new message to a new chat", () => {
+      const action = {
+        text: "Hello",
+        isUser: true,
+        problemSlug: "two-sum",
+      };
+      const state = chatReducer(initialState, addMessage(action));
+      expect(state.chats.length).toBe(1);
+      expect(state.chats[0].messages.length).toBe(1);
+      expect(state.chats[0].messages[0].text).toBe("Hello");
+      expect(saveChat).toHaveBeenCalled();
+    });
 
-    state = chatReducer(state, addMessage(botMessage));
-    expect(state.messages.length).toBe(2);
-    expect(state.messages[1].text).toBe("Hi");
-    expect(state.messages[1].isUser).toBe(false);
+    it("should add a new message to an existing chat", () => {
+      const existingState: ChatState = {
+        ...initialState,
+        chats: [{ id: "chat1", messages: [] }],
+        currentChatId: "chat1",
+      };
+      const action = {
+        text: "Hello",
+        isUser: true,
+        problemSlug: "two-sum",
+      };
+      const state = chatReducer(existingState, addMessage(action));
+      expect(state.chats.length).toBe(1);
+      expect(state.chats[0].messages.length).toBe(1);
+      expect(saveChat).toHaveBeenCalled();
+    });
   });
 
   it("should handle addContext", () => {
@@ -50,5 +76,46 @@ describe("chatSlice", () => {
   it("should handle removeContext", () => {
     const state = chatReducer(initialState, removeContext("Code"));
     expect(state.selectedContexts).toEqual(["Problem Details"]);
+  });
+
+  it("should handle setCurrentChat", () => {
+    const state = chatReducer(initialState, setCurrentChat("chat1"));
+    expect(state.currentChatId).toBe("chat1");
+  });
+
+  it("should handle newChat", () => {
+    const state = chatReducer(initialState, newChat());
+    expect(state.chats.length).toBe(1);
+    expect(state.currentChatId).toBe(state.chats[0].id);
+  });
+
+  describe("loadChats thunk", () => {
+    it("should load chats and set the first as current", async () => {
+      const mockChats: Chat[] = [{ id: "chat1", messages: [] }];
+      (loadChatsFromDB as jest.Mock).mockResolvedValue(mockChats);
+      const dispatch = jest.fn();
+      const thunk = loadChats("two-sum");
+      await thunk(dispatch, () => ({}), undefined);
+      const { calls } = dispatch.mock;
+      expect(calls.length).toBe(2);
+      expect(calls[0][0].type).toBe("chat/loadChats/pending");
+      expect(calls[1][0].type).toBe("chat/loadChats/fulfilled");
+      expect(calls[1][0].payload).toEqual(mockChats);
+
+      const state = chatReducer(initialState, calls[1][0]);
+      expect(state.chats).toEqual(mockChats);
+      expect(state.currentChatId).toBe("chat1");
+    });
+
+    it("should create a new chat if none are loaded", async () => {
+      (loadChatsFromDB as jest.Mock).mockResolvedValue([]);
+      const dispatch = jest.fn();
+      const thunk = loadChats("two-sum");
+      await thunk(dispatch, () => ({}), undefined);
+      const { calls } = dispatch.mock;
+      const state = chatReducer(initialState, calls[1][0]);
+      expect(state.chats.length).toBe(1);
+      expect(state.currentChatId).toBe(state.chats[0].id);
+    });
   });
 });

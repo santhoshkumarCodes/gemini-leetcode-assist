@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import "fake-indexeddb/auto";
 
 // Shared mock of Chrome API for tests
 const mockChrome = {

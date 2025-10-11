@@ -11,12 +11,11 @@ import {
 } from "@/state/slices/uiSlice";
 import ChatMessage from "./ChatMessage";
 import MessageInput from "./MessageInput";
-import { addMessage } from "@/state/slices/chatSlice";
+import { addMessage, loadChats } from "@/state/slices/chatSlice";
 import { setLoading, setError, clearError } from "@/state/slices/apiSlice";
 import { callGeminiApi } from "@/utils/gemini";
 import { loadApiKey } from "@/state/slices/settingsSlice";
 import { X, Minus, Bot, Maximize2 } from "lucide-react";
-import { formatProblemContext } from "@/utils/context";
 
 const ChatWindow: FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -24,7 +23,7 @@ const ChatWindow: FC = () => {
   const { isChatOpen, isChatMinimized, chatPosition, chatSize } = useSelector(
     (state: RootState) => state.ui,
   );
-  const { messages, selectedContexts } = useSelector(
+  const { chats, currentChatId, selectedContexts } = useSelector(
     (state: RootState) => state.chat,
   );
   const { apiKey, selectedModel } = useSelector((state: RootState) => state.settings);
@@ -36,6 +35,12 @@ const ChatWindow: FC = () => {
   useEffect(() => {
     dispatch(loadApiKey());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (currentProblemSlug) {
+      dispatch(loadChats(currentProblemSlug));
+    }
+  }, [currentProblemSlug, dispatch]);
 
   const [problemTitle, setProblemTitle] = useState<string | null>(null);
 
@@ -78,35 +83,53 @@ const ChatWindow: FC = () => {
   }, [currentProblemSlug]);
 
   const handleSendMessage = async (text: string) => {
+    if (!currentProblemSlug) return;
+
     dispatch(clearError());
     if (!apiKey) {
       dispatch(setError("API key not set."));
       return;
     }
 
-    let messageToSend = text;
-    if (selectedContexts.length > 0) {
-      try {
-        if (currentProblemSlug) {
-          const key = `leetcode-problem-${currentProblemSlug}`;
-          const result = await chrome.storage.local.get(key);
-          const problemData = result[key];
+    dispatch(addMessage({ text, isUser: true, problemSlug: currentProblemSlug }));
+    dispatch(setLoading(true));
 
-          if (problemData) {
-            const context = formatProblemContext(problemData, selectedContexts);
-            messageToSend = `${context}\n${text}`;
+    try {
+      let problemDetails: string | null = null;
+      let userCode: string | null = null;
+
+      if (selectedContexts.length > 0 && currentProblemSlug) {
+        const key = `leetcode-problem-${currentProblemSlug}`;
+        const result = await chrome.storage.local.get(key);
+        const problemData = result[key];
+
+        if (problemData) {
+          if (selectedContexts.includes("Problem Details")) {
+            problemDetails = JSON.stringify({
+              title: problemData.title,
+              description: problemData.description,
+              constraints: problemData.constraints,
+              examples: problemData.examples,
+            });
+          }
+          if (selectedContexts.includes("Code")) {
+            userCode = problemData.code;
           }
         }
-      } catch (e) {
-        console.error("Error getting context:", e);
       }
-    }
 
-    dispatch(addMessage({ text: text, isUser: true })); // Show original text in chat
-    dispatch(setLoading(true));
-    try {
-      const response = await callGeminiApi(apiKey, messageToSend, selectedModel); // Send context to API
-      dispatch(addMessage({ text: response, isUser: false }));
+      const currentChat = chats.find((chat) => chat.id === currentChatId);
+      const chatHistory = currentChat ? currentChat.messages.slice(-10) : [];
+
+      const response = await callGeminiApi(
+        apiKey,
+        selectedModel,
+        chatHistory,
+        problemDetails,
+        userCode,
+        text,
+      );
+      dispatch(addMessage({ text: response, isUser: false, problemSlug: currentProblemSlug }));
     } catch (error) {
       dispatch(setError((error as Error).message));
     } finally {
@@ -118,7 +141,11 @@ const ChatWindow: FC = () => {
     return null;
   }
 
+  const currentChat = chats.find((chat) => chat.id === currentChatId);
+  const messages = currentChat ? currentChat.messages : [];
+
   return (
+
     <div className="isolate">
       <Draggable
         nodeRef={nodeRef}
