@@ -14,12 +14,14 @@ export interface ChatState {
   chats: Chat[];
   currentChatId: string | null;
   selectedContexts: string[];
+  currentProblemSlug: string | null;
 }
 
 const initialState: ChatState = {
   chats: [],
   currentChatId: null,
   selectedContexts: ["Problem Details", "Code"],
+  currentProblemSlug: null,
 };
 
 export const loadChats = createAsyncThunk(
@@ -76,14 +78,45 @@ const chatSlice = createSlice({
     }
   },
   extraReducers: (builder) => {
+    builder.addCase(loadChats.pending, (state, action) => {
+      if (state.currentProblemSlug !== action.meta.arg) {
+        state.chats = [];
+        state.currentChatId = null;
+      }
+      state.currentProblemSlug = action.meta.arg;
+    });
     builder.addCase(loadChats.fulfilled, (state, action: PayloadAction<Chat[]>) => {
-      state.chats = action.payload;
-      if (state.chats.length > 0) {
-        state.currentChatId = state.chats[0].id;
-      } else {
-        const newChatId = nanoid();
-        state.chats.push({ id: newChatId, messages: [] });
-        state.currentChatId = newChatId;
+      if (action.meta.arg !== state.currentProblemSlug) {
+        return;
+      }
+
+      const loadedChats = action.payload;
+      const existingChats = state.chats;
+
+      if (existingChats.length === 0) {
+        state.chats = loadedChats;
+        if (state.chats.length > 0) {
+          state.currentChatId = state.chats[0].id;
+        } else {
+          const newChatId = nanoid();
+          state.chats.push({ id: newChatId, messages: [] });
+          state.currentChatId = newChatId;
+        }
+        return;
+      }
+
+      const existingChatMap = new Map(existingChats.map(c => [c.id, c]));
+
+      for (const loadedChat of loadedChats) {
+        if (!existingChatMap.has(loadedChat.id)) {
+          state.chats.push(loadedChat);
+        }
+      }
+
+      if (!state.currentChatId || !state.chats.find(c => c.id === state.currentChatId)) {
+        if (state.chats.length > 0) {
+          state.currentChatId = state.chats[0].id;
+        }
       }
     });
   }

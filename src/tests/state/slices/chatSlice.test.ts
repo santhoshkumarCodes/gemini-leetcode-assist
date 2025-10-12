@@ -16,6 +16,7 @@ const initialState: ChatState = {
   chats: [],
   currentChatId: null,
   selectedContexts: ["Problem Details", "Code"],
+  currentProblemSlug: null,
 };
 
 describe("chatSlice", () => {
@@ -95,27 +96,31 @@ describe("chatSlice", () => {
       (loadChatsFromDB as jest.Mock).mockResolvedValue(mockChats);
       const dispatch = jest.fn();
       const thunk = loadChats("two-sum");
-      await thunk(dispatch, () => ({}), undefined);
+      await thunk(dispatch, () => ({ chat: initialState }), undefined);
       const { calls } = dispatch.mock;
       expect(calls.length).toBe(2);
       expect(calls[0][0].type).toBe("chat/loadChats/pending");
       expect(calls[1][0].type).toBe("chat/loadChats/fulfilled");
       expect(calls[1][0].payload).toEqual(mockChats);
 
-      const state = chatReducer(initialState, calls[1][0]);
-      expect(state.chats).toEqual(mockChats);
-      expect(state.currentChatId).toBe("chat1");
+      const pendingState = chatReducer(initialState, calls[0][0]);
+      const finalState = chatReducer(pendingState, calls[1][0]);
+      expect(finalState.chats).toEqual(mockChats);
+      expect(finalState.currentChatId).toBe("chat1");
+      expect(finalState.currentProblemSlug).toBe("two-sum");
     });
 
     it("should create a new chat if none are loaded", async () => {
       (loadChatsFromDB as jest.Mock).mockResolvedValue([]);
       const dispatch = jest.fn();
       const thunk = loadChats("two-sum");
-      await thunk(dispatch, () => ({}), undefined);
+      await thunk(dispatch, () => ({ chat: initialState }), undefined);
       const { calls } = dispatch.mock;
-      const state = chatReducer(initialState, calls[1][0]);
-      expect(state.chats.length).toBe(1);
-      expect(state.currentChatId).toBe(state.chats[0].id);
+      const pendingState = chatReducer(initialState, calls[0][0]);
+      const finalState = chatReducer(pendingState, calls[1][0]);
+      expect(finalState.chats.length).toBe(1);
+      expect(finalState.currentChatId).toBe(finalState.chats[0].id);
+      expect(finalState.currentProblemSlug).toBe("two-sum");
     });
   });
 });

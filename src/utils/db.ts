@@ -27,7 +27,9 @@ export const saveChat = async (
   messages: Chat["messages"],
 ) => {
   const db = await getDB();
-  const allChatsForProblem = (await db.get("chats", problemSlug)) || [];
+  const tx = db.transaction("chats", "readwrite");
+  const store = tx.objectStore("chats");
+  const allChatsForProblem = (await store.get(problemSlug)) || [];
   const chatIndex = allChatsForProblem.findIndex((chat) => chat.id === chatId);
 
   if (chatIndex > -1) {
@@ -36,7 +38,8 @@ export const saveChat = async (
     allChatsForProblem.push({ id: chatId, messages });
   }
 
-  await db.put("chats", allChatsForProblem, problemSlug);
+  store.put(allChatsForProblem, problemSlug);
+  await tx.done;
 };
 
 export const loadChats = async (problemSlug: string): Promise<Chat[]> => {
