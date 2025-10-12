@@ -185,7 +185,7 @@ describe("chatSlice", () => {
         ...initialState,
         chats: [existingChat],
         currentChatId: existingChat.id,
-        currentProblemSlug: "two-sum"
+        currentProblemSlug: "two-sum",
       };
 
       // Setup mock for loading chats
@@ -199,13 +199,13 @@ describe("chatSlice", () => {
 
       const pendingAction = {
         type: loadChats.pending.type,
-        meta: { arg: "two-sum", requestId: "test" }
+        meta: { arg: "two-sum", requestId: "test" },
       };
 
       const fulfilledAction = {
         type: loadChats.fulfilled.type,
         payload: [newChat],
-        meta: { arg: "two-sum", requestId: "test" }
+        meta: { arg: "two-sum", requestId: "test" },
       };
 
       // Apply actions in sequence
@@ -213,10 +213,9 @@ describe("chatSlice", () => {
       state = chatReducer(state, fulfilledAction);
 
       // Verify both chats are present
-      expect(state.chats).toEqual(expect.arrayContaining([
-        existingChat,
-        newChat
-      ]));
+      expect(state.chats).toEqual(
+        expect.arrayContaining([existingChat, newChat]),
+      );
       expect(state.currentProblemSlug).toBe("two-sum");
     });
 
@@ -244,21 +243,21 @@ describe("chatSlice", () => {
 
       // Start with problem1
       let state = chatReducer(initialState, {
-        type: 'chat/loadChats/pending',
-        meta: { arg: "problem1", requestId: "test1" }
+        type: "chat/loadChats/pending",
+        meta: { arg: "problem1", requestId: "test1" },
       });
 
       // Change to problem2 before first load completes
       state = chatReducer(state, {
-        type: 'chat/loadChats/pending',
-        meta: { arg: "problem2", requestId: "test2" }
+        type: "chat/loadChats/pending",
+        meta: { arg: "problem2", requestId: "test2" },
       });
 
       // Complete problem1's load (should be ignored)
       state = chatReducer(state, {
-        type: 'chat/loadChats/fulfilled',
+        type: "chat/loadChats/fulfilled",
         payload: mockChats,
-        meta: { arg: "problem1", requestId: "test1" }
+        meta: { arg: "problem1", requestId: "test1" },
       });
 
       // Verify state matches problem2's state
@@ -309,7 +308,9 @@ describe("chatSlice", () => {
     });
 
     it("should handle save failure", async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const state: ChatState = {
         ...initialState,
         chats: [{ id: "chat1", messages: [message] }],

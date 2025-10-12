@@ -8,7 +8,8 @@ interface LeetCodeAssistantDB extends DBSchema {
   };
 }
 
-let dbPromise: Promise<import('idb').IDBPDatabase<LeetCodeAssistantDB>> | null = null;
+let dbPromise: Promise<import("idb").IDBPDatabase<LeetCodeAssistantDB>> | null =
+  null;
 
 const getDB = () => {
   if (!dbPromise) {

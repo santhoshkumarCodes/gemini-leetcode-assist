@@ -161,15 +161,17 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
             </button>
             {isModelMenuOpen && (
               <div className="absolute bottom-full mb-2 w-44 bg-[#3a3a3a] border border-gray-500 rounded-md shadow-lg z-10">
-                {Object.entries(MODEL_DISPLAY_NAMES).map(([model, displayName]) => (
-                  <button
-                    key={model}
-                    onClick={() => handleModelSelect(model)}
-                    className="block w-full text-left px-3 py-1 text-sm text-white/80 hover:bg-gray-700"
-                  >
-                    {displayName}
-                  </button>
-                ))}
+                {Object.entries(MODEL_DISPLAY_NAMES).map(
+                  ([model, displayName]) => (
+                    <button
+                      key={model}
+                      onClick={() => handleModelSelect(model)}
+                      className="block w-full text-left px-3 py-1 text-sm text-white/80 hover:bg-gray-700"
+                    >
+                      {displayName}
+                    </button>
+                  ),
+                )}
               </div>
             )}
           </div>

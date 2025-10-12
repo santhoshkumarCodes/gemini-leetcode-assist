@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom";
 import "fake-indexeddb/auto";
 
-if (typeof global.structuredClone === 'undefined') {
-  global.structuredClone = val => JSON.parse(JSON.stringify(val));
+if (typeof global.structuredClone === "undefined") {
+  global.structuredClone = (val) => JSON.parse(JSON.stringify(val));
 }
 
 // Shared mock of Chrome API for tests

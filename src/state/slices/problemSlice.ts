@@ -5,9 +5,10 @@ interface ProblemState {
 }
 
 const initialState: ProblemState = {
-  currentProblemSlug: typeof window !== "undefined"
-    ? window.location.pathname.split("/")[2] || null
-    : null,
+  currentProblemSlug:
+    typeof window !== "undefined"
+      ? window.location.pathname.split("/")[2] || null
+      : null,
 };
 
 const problemSlice = createSlice({

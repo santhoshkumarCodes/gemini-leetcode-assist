@@ -23,7 +23,10 @@ const mockStore = configureStore([thunk]);
 // Helper function to create a complete mock state
 type MockStateOverrides = Partial<{
   chat: Partial<{
-    chats: Array<{ id: string; messages: Array<{ id: string; text: string; isUser: boolean }> }>;
+    chats: Array<{
+      id: string;
+      messages: Array<{ id: string; text: string; isUser: boolean }>;
+    }>;
     currentChatId: string | null;
     selectedContexts: string[];
   }>;

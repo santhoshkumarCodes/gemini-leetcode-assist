@@ -1,4 +1,9 @@
-import { createSlice, PayloadAction, nanoid, createAsyncThunk } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  PayloadAction,
+  nanoid,
+  createAsyncThunk,
+} from "@reduxjs/toolkit";
 import { saveChat, loadChats as loadChatsFromDB } from "@/utils/db";
 
 export interface ChatMessage {
@@ -99,12 +104,12 @@ const chatSlice = createSlice({
       const newChatId = nanoid();
       state.chats.push({ id: newChatId, messages: [] });
       state.currentChatId = newChatId;
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(loadChats.pending, (state, action) => {
-        state.loading = 'pending';
+        state.loading = "pending";
         state.currentRequestId = action.meta.requestId;
         if (state.currentProblemSlug !== action.meta.arg) {
           state.chats = [];
@@ -113,8 +118,11 @@ const chatSlice = createSlice({
         state.currentProblemSlug = action.meta.arg;
       })
       .addCase(loadChats.fulfilled, (state, action: PayloadAction<Chat[]>) => {
-        if (state.loading === 'pending' && state.currentRequestId === action.meta.requestId) {
-          state.loading = 'idle';
+        if (
+          state.loading === "pending" &&
+          state.currentRequestId === action.meta.requestId
+        ) {
+          state.loading = "idle";
           state.currentRequestId = undefined;
 
           if (action.meta.arg !== state.currentProblemSlug) {
@@ -136,7 +144,7 @@ const chatSlice = createSlice({
             return;
           }
 
-          const existingChatMap = new Map(existingChats.map(c => [c.id, c]));
+          const existingChatMap = new Map(existingChats.map((c) => [c.id, c]));
 
           for (const loadedChat of loadedChats) {
             if (!existingChatMap.has(loadedChat.id)) {
@@ -144,7 +152,10 @@ const chatSlice = createSlice({
             }
           }
 
-          if (!state.currentChatId || !state.chats.find(c => c.id === state.currentChatId)) {
+          if (
+            !state.currentChatId ||
+            !state.chats.find((c) => c.id === state.currentChatId)
+          ) {
             if (state.chats.length > 0) {
               state.currentChatId = state.chats[0].id;
             }
@@ -152,43 +163,50 @@ const chatSlice = createSlice({
         }
       })
       .addCase(loadChats.rejected, (state, action) => {
-        if (state.loading === 'pending' && state.currentRequestId === action.meta.requestId) {
-            state.loading = 'idle';
-            state.currentRequestId = undefined;
+        if (
+          state.loading === "pending" &&
+          state.currentRequestId === action.meta.requestId
+        ) {
+          state.loading = "idle";
+          state.currentRequestId = undefined;
         }
       })
       .addCase(addMessage.pending, (state, action) => {
-          const { text, isUser, messageId, chatId } = action.meta.arg;
-          let chat = state.chats.find(c => c.id === chatId);
-          if (!chat) {
-              chat = { id: chatId, messages: [] };
-              state.chats.push(chat);
-              state.currentChatId = chatId;
-          }
-          chat.messages.push({ id: messageId, text, isUser, status: 'sending' });
+        const { text, isUser, messageId, chatId } = action.meta.arg;
+        let chat = state.chats.find((c) => c.id === chatId);
+        if (!chat) {
+          chat = { id: chatId, messages: [] };
+          state.chats.push(chat);
+          state.currentChatId = chatId;
+        }
+        chat.messages.push({ id: messageId, text, isUser, status: "sending" });
       })
       .addCase(addMessage.fulfilled, (state, action) => {
-          const { chatId, messageId } = action.payload;
-          const chat = state.chats.find(c => c.id === chatId);
-          if (chat) {
-              const message = chat.messages.find(m => m.id === messageId);
-              if (message) {
-                  message.status = 'succeeded';
-              }
+        const { chatId, messageId } = action.payload;
+        const chat = state.chats.find((c) => c.id === chatId);
+        if (chat) {
+          const message = chat.messages.find((m) => m.id === messageId);
+          if (message) {
+            message.status = "succeeded";
           }
+        }
       })
       .addCase(addMessage.rejected, (state, action) => {
-          const { chatId, messageId } = action.payload as { chatId: string, messageId: string };
-          const chat = state.chats.find(c => c.id === chatId);
-          if (chat) {
-              const message = chat.messages.find(m => m.id === messageId);
-              if (message) {
-                  message.status = 'failed';
-              }
+        const { chatId, messageId } = action.payload as {
+          chatId: string;
+          messageId: string;
+        };
+        const chat = state.chats.find((c) => c.id === chatId);
+        if (chat) {
+          const message = chat.messages.find((m) => m.id === messageId);
+          if (message) {
+            message.status = "failed";
           }
+        }
       });
-  }
+  },
 });
 
-export const { addContext, removeContext, setCurrentChat, newChat } = chatSlice.actions;
+export const { addContext, removeContext, setCurrentChat, newChat } =
+  chatSlice.actions;
 export default chatSlice.reducer;

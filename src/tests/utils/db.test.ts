@@ -34,20 +34,30 @@ describe("db utils", () => {
   describe("saveChat", () => {
     it("should add a new chat if one does not exist", async () => {
       mockStore.get.mockResolvedValue([]);
-      await saveChat("two-sum", "chat1", [{ id: "msg1", text: "Hello", isUser: true }]);
+      await saveChat("two-sum", "chat1", [
+        { id: "msg1", text: "Hello", isUser: true },
+      ]);
 
       expect(mockDb.transaction).toHaveBeenCalledWith("chats", "readwrite");
       expect(mockTx.objectStore).toHaveBeenCalledWith("chats");
       expect(mockStore.get).toHaveBeenCalledWith("two-sum");
       expect(mockStore.put).toHaveBeenCalledWith(
-        [{ id: "chat1", messages: [{ id: "msg1", text: "Hello", isUser: true }] }],
+        [
+          {
+            id: "chat1",
+            messages: [{ id: "msg1", text: "Hello", isUser: true }],
+          },
+        ],
         "two-sum",
       );
     });
 
     it("should update an existing chat", async () => {
       mockStore.get.mockResolvedValue([
-        { id: "chat1", messages: [{ id: "msg1", text: "Hello", isUser: true }] },
+        {
+          id: "chat1",
+          messages: [{ id: "msg1", text: "Hello", isUser: true }],
+        },
       ]);
       await saveChat("two-sum", "chat1", [
         { id: "msg1", text: "Hello", isUser: true },

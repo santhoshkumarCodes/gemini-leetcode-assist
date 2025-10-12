@@ -27,7 +27,9 @@ const ChatWindow: FC = () => {
   const { chats, currentChatId, selectedContexts } = useSelector(
     (state: RootState) => state.chat,
   );
-  const { apiKey, selectedModel } = useSelector((state: RootState) => state.settings);
+  const { apiKey, selectedModel } = useSelector(
+    (state: RootState) => state.settings,
+  );
   const { isLoading, error } = useSelector((state: RootState) => state.api);
   const { currentProblemSlug } = useSelector(
     (state: RootState) => state.problem,
@@ -166,7 +168,6 @@ const ChatWindow: FC = () => {
   const messages = currentChat ? currentChat.messages : [];
 
   return (
-
     <div className="isolate">
       <Draggable
         nodeRef={nodeRef}
