@@ -12,6 +12,7 @@ import {
 import ChatMessage from "./ChatMessage";
 import MessageInput from "./MessageInput";
 import { addMessage, loadChats } from "@/state/slices/chatSlice";
+import { nanoid } from "@reduxjs/toolkit";
 import { setLoading, setError, clearError } from "@/state/slices/apiSlice";
 import { callGeminiApi } from "@/utils/gemini";
 import { loadApiKey } from "@/state/slices/settingsSlice";
@@ -50,7 +51,7 @@ const ChatWindow: FC = () => {
         if (currentProblemSlug) {
           const key = `leetcode-problem-${currentProblemSlug}`;
           const result = await chrome.storage.local.get(key);
-          const problemData = result[key];
+          const problemData = result && result[key];
           if (problemData && problemData.title) {
             // Remove leading numbering like "1. " or "12. " from titles
             const cleaned = String(problemData.title)
@@ -91,7 +92,18 @@ const ChatWindow: FC = () => {
       return;
     }
 
-    dispatch(addMessage({ text, isUser: true, problemSlug: currentProblemSlug }));
+    const userMessageId = nanoid();
+    const chatId = currentChatId || nanoid();
+
+    dispatch(
+      addMessage({
+        text,
+        isUser: true,
+        problemSlug: currentProblemSlug,
+        messageId: userMessageId,
+        chatId,
+      }),
+    );
     dispatch(setLoading(true));
 
     try {
@@ -129,7 +141,16 @@ const ChatWindow: FC = () => {
         userCode,
         text,
       );
-      dispatch(addMessage({ text: response, isUser: false, problemSlug: currentProblemSlug }));
+      const assistantMessageId = nanoid();
+      dispatch(
+        addMessage({
+          text: response,
+          isUser: false,
+          problemSlug: currentProblemSlug,
+          messageId: assistantMessageId,
+          chatId,
+        }),
+      );
     } catch (error) {
       dispatch(setError((error as Error).message));
     } finally {
@@ -246,6 +267,7 @@ const ChatWindow: FC = () => {
                           key={msg.id}
                           text={msg.text}
                           isUser={msg.isUser}
+                          status={msg.status}
                         />
                       ))}
                     </>

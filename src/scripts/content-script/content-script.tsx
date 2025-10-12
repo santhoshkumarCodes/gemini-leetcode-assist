@@ -73,41 +73,57 @@ createRoot(root).render(<Injection />);
 
 // 3. Parse the static problem details from the DOM
 function handleProblemChange() {
-  const problemSlug = window.location.pathname.split("/")[2];
-  if (problemSlug) {
-    store.dispatch(setProblemSlug(problemSlug));
-  }
+  const pathSegments = window.location.pathname.split("/");
+  // Expected URL: /problems/<slug>/...
+  if (pathSegments.length > 2 && pathSegments[1] === "problems") {
+    const problemSlug = pathSegments[2];
+    parseLeetCodeProblem()
+      .then((details) => {
+        // Check if it's a new problem
+        if (details.title !== problemDetails?.title) {
+          store.dispatch(setProblemSlug(problemSlug));
+          problemDetails = details;
 
-  parseLeetCodeProblem()
-    .then((details) => {
-      if (details.title !== problemDetails?.title) {
-        problemDetails = details;
-        // If we have already received code, send the first unified update now
-        if (lastSentCode !== null) {
-          sendUnifiedUpdate(lastSentCode);
+          // If we have already received code, send the first unified update
+          if (lastSentCode !== null) {
+            sendUnifiedUpdate(lastSentCode);
+          }
         }
-      }
-    })
-    .catch((error) => {
-      console.error("Failed to parse LeetCode problem details:", error);
-    });
+      })
+      .catch((error) => {
+        console.error("Failed to parse LeetCode problem details:", error);
+        // On failure, clear the slug to avoid inconsistent state
+        store.dispatch(setProblemSlug(null));
+      });
+  } else {
+    // Not on a problem page, or URL format is unexpected
+    if (problemDetails !== null) {
+      problemDetails = null;
+      store.dispatch(setProblemSlug(null));
+    }
+  }
 }
 
 // Initial parse
 handleProblemChange();
 
 // --- Observe for problem changes (client-side navigation) ---
-const observer = new MutationObserver((mutations) => {
-  for (const mutation of mutations) {
-    // Check if nodes were added, and if the title changed
-    if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-      const titleElement = document.querySelector(".text-title-large");
-      if (titleElement && titleElement.textContent !== problemDetails?.title) {
-        handleProblemChange();
-        break; // No need to check other mutations
-      }
+let debounceTimer: number | null = null;
+let lastSeenTitle: string | null = null;
+const observer = new MutationObserver(() => {
+  clearTimeout(debounceTimer);
+  debounceTimer = window.setTimeout(() => {
+    const titleElement = document.querySelector(".text-title-large");
+    const currentTitle = titleElement?.textContent;
+    if (
+      currentTitle &&
+      currentTitle !== problemDetails?.title &&
+      currentTitle !== lastSeenTitle
+    ) {
+      lastSeenTitle = currentTitle;
+      handleProblemChange();
     }
-  }
+  }, 200);
 });
 
 // Start observing the body for subtree modifications
@@ -121,4 +137,12 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "TOGGLE_CHAT") {
     store.dispatch(toggleChat());
   }
+});
+
+// 6. Cleanup on unload
+window.addEventListener("beforeunload", () => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+  observer.disconnect();
 });

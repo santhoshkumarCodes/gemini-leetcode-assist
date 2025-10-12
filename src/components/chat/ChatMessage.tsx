@@ -13,18 +13,21 @@ type MessageShape = {
 };
 
 type ChatMessageProps =
-  | { text: string; isUser: boolean }
-  | { message: MessageShape };
+  | { text: string; isUser: boolean; status?: 'sending' | 'succeeded' | 'failed' }
+  | { message: MessageShape & { status?: 'sending' | 'succeeded' | 'failed' } };
 
 const ChatMessage: FC<ChatMessageProps> = (props) => {
   // Support two prop shapes used across code/tests
   const text = "text" in props ? props.text : props.message?.text || "";
   const isUser =
     "isUser" in props ? props.isUser : props.message?.sender === "user";
+  const status = "status" in props ? props.status : props.message?.status;
+
   if (isUser) {
     return (
-      <div className="flex justify-end mb-4 user-message">
-        <div className="max-w-[85%] rounded-lg px-4 py-2 text-[clamp(12px,2.5cqw,16px)] bg-blue-500 text-white">
+      <div className="flex justify-end mb-4 user-message items-center">
+        {status === 'failed' && <span className="text-xs text-red-500 mr-2">Failed</span>}
+        <div className={`max-w-[85%] rounded-lg px-4 py-2 text-[clamp(12px,2.5cqw,16px)] bg-blue-500 text-white ${status === 'sending' ? 'opacity-70' : ''}`}>
           {text}
         </div>
       </div>

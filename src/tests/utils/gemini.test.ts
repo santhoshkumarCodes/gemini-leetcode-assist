@@ -54,6 +54,11 @@ describe("callGeminiApi", () => {
   });
 
   it("should construct the final prompt correctly", async () => {
+    mockGenerateContent.mockResolvedValue({
+      response: {
+        text: () => "mock response",
+      },
+    });
     await callGeminiApi(
       apiKey,
       modelName,
@@ -73,6 +78,11 @@ describe("callGeminiApi", () => {
   });
 
   it("should handle null problemDetails and userCode", async () => {
+    mockGenerateContent.mockResolvedValue({
+      response: {
+        text: () => "mock response",
+      },
+    });
     await callGeminiApi(apiKey, modelName, chatHistory, null, null, currentUserMessage);
 
     const finalPrompt = mockGenerateContent.mock.calls[0][0];

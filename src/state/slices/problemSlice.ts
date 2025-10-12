@@ -14,7 +14,7 @@ const problemSlice = createSlice({
   name: "problem",
   initialState,
   reducers: {
-    setProblemSlug: (state, action: PayloadAction<string>) => {
+    setProblemSlug: (state, action: PayloadAction<string | null>) => {
       state.currentProblemSlug = action.payload;
     },
   },
