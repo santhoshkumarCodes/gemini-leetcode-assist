@@ -1,21 +1,28 @@
-// Tests for src/scripts/content-script/content-script.ts
-
 // Import mockChrome from setupTests
 import { mockChrome } from "./setupTests";
+import { configureStore } from "@reduxjs/toolkit";
+import uiReducer from "@/state/slices/uiSlice";
+import chatReducer from "@/state/slices/chatSlice";
+import settingsReducer from "@/state/slices/settingsSlice";
+import apiReducer from "@/state/slices/apiSlice";
+import problemReducer from "@/state/slices/problemSlice";
+import { RootState } from "@/state/store";
 
-// Mock the parser with a delegating implementation we can control per test
-type ParserImpl = () => Promise<{
-  title: string;
-  description: string;
-  examples: string[];
-  constraints: string;
-}>;
-let mockParseImpl: ParserImpl;
+// Mock parser
+const mockParseLeetCodeProblem = jest.fn();
+jest.mock("../scripts/content-script/parser", () => ({
+  __esModule: true,
+  parseLeetCodeProblem: mockParseLeetCodeProblem,
+}));
 
-jest.mock("../scripts/content-script/parser", () => {
+// Create a proper store mock
+let mockStore: ReturnType<typeof configureStore>;
+jest.mock("@/state/store", () => {
   return {
     __esModule: true,
-    parseLeetCodeProblem: jest.fn(() => mockParseImpl()),
+    get default() {
+      return mockStore;
+    },
   };
 });
 
@@ -43,6 +50,20 @@ describe("content-script", () => {
     jest.resetModules();
     jest.clearAllMocks();
 
+    // Reset parser mock
+    mockParseLeetCodeProblem.mockReset();
+
+    // Create real Redux store for testing
+    mockStore = configureStore({
+      reducer: {
+        chat: chatReducer,
+        settings: settingsReducer,
+        ui: uiReducer,
+        api: apiReducer,
+        problem: problemReducer,
+      },
+    });
+
     // Set a relative path to avoid cross-origin SecurityError in jsdom
     window.history.replaceState({}, "", "/problems/two-sum/");
 
@@ -51,7 +72,9 @@ describe("content-script", () => {
     messageHandler = null;
 
     // Default parser impl resolves immediately
-    mockParseImpl = () => Promise.resolve(fakeDetails);
+    mockParseLeetCodeProblem.mockImplementation(() =>
+      Promise.resolve(fakeDetails),
+    );
   });
 
   afterEach(() => {
@@ -135,10 +158,12 @@ describe("content-script", () => {
   it("does not send updates before parsing is ready, but sends after it resolves", async () => {
     // Create a deferred promise to control when parse resolves
     let resolveParse!: (value: typeof fakeDetails) => void;
-    mockParseImpl = () =>
-      new Promise<typeof fakeDetails>((res) => {
-        resolveParse = res;
-      });
+    mockParseLeetCodeProblem.mockImplementation(
+      () =>
+        new Promise<typeof fakeDetails>((res) => {
+          resolveParse = res;
+        }),
+    );
 
     await import("../scripts/content-script/content-script");
 
@@ -189,17 +214,119 @@ describe("content-script", () => {
 
   it("logs parse errors when parsing problem details fails", async () => {
     const error = new Error("boom");
-    mockParseImpl = () => Promise.reject(error);
+    mockParseLeetCodeProblem.mockImplementation(() => Promise.reject(error));
     const consoleErrorSpy = jest
       .spyOn(console, "error")
       .mockImplementation(() => {});
     await import("../scripts/content-script/content-script");
     // allow the promise rejection to be handled
-    await new Promise(process.nextTick);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "Failed to parse LeetCode problem details:",
       error,
     );
     consoleErrorSpy.mockRestore();
+  });
+
+  // New test cases for improved coverage
+  it("handles title changes through mutation observer", async () => {
+    await import("../scripts/content-script/content-script");
+    await Promise.resolve();
+
+    // Add title element
+    const titleElement = document.createElement("div");
+    titleElement.className = "text-title-large";
+    titleElement.textContent = "Three Sum";
+    document.body.appendChild(titleElement);
+
+    // Simulate mutation
+    await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for debounce
+
+    // Should trigger a new problem parse
+    expect(mockParseLeetCodeProblem).toHaveBeenCalled();
+  });
+
+  it("cleans up properly on page unload", async () => {
+    await import("../scripts/content-script/content-script");
+
+    // Add title element to trigger observer
+    const titleElement = document.createElement("div");
+    titleElement.className = "text-title-large";
+    document.body.appendChild(titleElement);
+
+    // Verify observer is working
+    titleElement.textContent = "New Problem";
+    await new Promise((resolve) => setTimeout(resolve, 250)); // Wait for debounce
+
+    // Trigger beforeunload
+    window.dispatchEvent(new Event("beforeunload"));
+
+    // Add new title - should not trigger observer anymore
+    titleElement.textContent = "Another Problem";
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // Only the first title change should have triggered a parse
+    expect(mockParseLeetCodeProblem).toHaveBeenCalledTimes(2); // Initial + first change
+  });
+
+  it("handles chat toggle messages from popup", async () => {
+    await import("../scripts/content-script/content-script");
+
+    // Get initial state
+    const state = mockStore.getState() as RootState;
+    expect(state.ui.isChatOpen).toBe(false);
+
+    // Simulate receiving a TOGGLE_CHAT message
+    if (mockChrome.runtime.onMessage.addListener.mock.calls[0]) {
+      const messageListener =
+        mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
+      await messageListener({ type: "TOGGLE_CHAT" });
+    }
+
+    // Verify the UI state was toggled
+    const finalState = mockStore.getState() as RootState;
+    expect(finalState.ui.isChatOpen).toBe(true);
+  });
+
+  it("updates Redux store state through chat toggle action", async () => {
+    await import("../scripts/content-script/content-script");
+
+    // Get initial state
+    const initialState = mockStore.getState() as RootState;
+    expect(initialState.ui.isChatOpen).toBe(false);
+
+    // Dispatch toggle action through store
+    mockStore.dispatch({ type: "ui/toggleChat" });
+
+    // Verify state updated
+    const updatedState = mockStore.getState() as RootState;
+    expect(updatedState.ui.isChatOpen).toBe(true);
+
+    // Toggle back
+    mockStore.dispatch({ type: "ui/toggleChat" });
+    const finalState = mockStore.getState() as RootState;
+    expect(finalState.ui.isChatOpen).toBe(false);
+  });
+
+  it("stops observing when navigating away from a problem page", async () => {
+    await import("../scripts/content-script/content-script");
+    await Promise.resolve();
+
+    // Navigate to a non-problem page
+    window.history.replaceState({}, "", "/contest/");
+
+    // Trigger problem change
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Add a title change that should be ignored
+    const titleElement = document.createElement("div");
+    titleElement.className = "text-title-large";
+    titleElement.textContent = "Contest Page";
+    document.body.appendChild(titleElement);
+
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // Should not trigger additional parsing
+    expect(mockParseLeetCodeProblem).toHaveBeenCalledTimes(1); // Just the initial parse
   });
 });

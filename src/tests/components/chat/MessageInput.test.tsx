@@ -19,7 +19,7 @@ const createMockState = (overrides = {}) => ({
     isModelMenuOpen: false,
   },
   settings: {
-    selectedModel: "Gemini 2.5 Pro",
+    selectedModel: "gemini-2.5-pro",
   },
   ...overrides,
 });
@@ -224,7 +224,7 @@ describe("MessageInput", () => {
     fireEvent.click(flashModelButton);
 
     expect(store.getActions()).toContainEqual(
-      setSelectedModel("Gemini 2.5 Flash"),
+      setSelectedModel("gemini-2.5-flash"),
     );
     expect(store.getActions()).toContainEqual(setModelMenuOpen(false));
   });

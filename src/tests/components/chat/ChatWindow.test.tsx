@@ -11,13 +11,23 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import { thunk } from "redux-thunk";
 import { toggleChat, toggleMinimize } from "@/state/slices/uiSlice";
 import * as gemini from "@/utils/gemini";
+import { loadChats } from "@/state/slices/chatSlice";
+
+jest.mock("@/state/slices/chatSlice", () => ({
+  ...jest.requireActual("@/state/slices/chatSlice"),
+  loadChats: jest.fn(),
+}));
 
 const mockStore = configureStore([thunk]);
 
 // Helper function to create a complete mock state
 type MockStateOverrides = Partial<{
   chat: Partial<{
-    messages: Array<{ id: string; text: string; isUser: boolean }>;
+    chats: Array<{
+      id: string;
+      messages: Array<{ id: string; text: string; isUser: boolean }>;
+    }>;
+    currentChatId: string | null;
     selectedContexts: string[];
   }>;
   ui: Partial<{
@@ -36,11 +46,14 @@ type MockStateOverrides = Partial<{
     isLoading: boolean;
     error: string | null;
   }>;
+  problem: Partial<{
+    currentProblemSlug: string | null;
+  }>;
   [key: string]: unknown;
 }>;
 
 const createMockState = (overrides: MockStateOverrides = {}) => {
-  const defaultChat = { messages: [], selectedContexts: [] };
+  const defaultChat = { chats: [], currentChatId: null, selectedContexts: [] };
   const defaultUi = {
     isChatOpen: true,
     isChatMinimized: false,
@@ -51,18 +64,20 @@ const createMockState = (overrides: MockStateOverrides = {}) => {
   };
   const defaultSettings = {
     apiKey: "test-api-key",
-    selectedModel: "Gemini 2.5 Pro",
+    selectedModel: "gemini-2.5-pro",
   };
   const defaultApi = { isLoading: false, error: null };
+  const defaultProblem = { currentProblemSlug: "two-sum" };
 
   return {
     chat: { ...defaultChat, ...(overrides.chat || {}) },
     ui: { ...defaultUi, ...(overrides.ui || {}) },
     settings: { ...defaultSettings, ...(overrides.settings || {}) },
     api: { ...defaultApi, ...(overrides.api || {}) },
+    problem: { ...defaultProblem, ...(overrides.problem || {}) },
     ...Object.fromEntries(
       Object.entries(overrides).filter(
-        ([k]) => !["chat", "ui", "settings", "api"].includes(k),
+        ([k]) => !["chat", "ui", "settings", "api", "problem"].includes(k),
       ),
     ),
   };
@@ -92,15 +107,22 @@ describe("ChatWindow", () => {
     window.history.pushState({}, "", "/problems/two-sum/");
 
     jest.spyOn(gemini, "callGeminiApi").mockResolvedValue("Bot response");
+    (loadChats as jest.Mock).mockReturnValue({ type: "chat/loadChats/mock" });
   });
 
   it("renders chat messages", async () => {
     const state = createMockState({
       chat: {
-        messages: [
-          { id: "1", text: "User message", isUser: true },
-          { id: "2", text: "Bot message", isUser: false },
+        chats: [
+          {
+            id: "chat1",
+            messages: [
+              { id: "1", text: "User message", isUser: true },
+              { id: "2", text: "Bot message", isUser: false },
+            ],
+          },
         ],
+        currentChatId: "chat1",
       },
     });
     const store = mockStore(state);
@@ -146,18 +168,30 @@ describe("ChatWindow", () => {
     ).toBeInTheDocument();
   });
 
+  it("dispatches loadChats on mount if problem slug exists", async () => {
+    const store = mockStore(createMockState());
+    await renderWithStore(store);
+    expect(loadChats).toHaveBeenCalledWith("two-sum");
+  });
+
   it("sends context with the message", async () => {
     (chrome.storage.local.get as jest.Mock).mockResolvedValue({
       "leetcode-problem-two-sum": {
         title: "1. Two Sum",
         description: "<p>Problem description</p>",
+        constraints: "constraints",
+        examples: "examples",
         code: "class Solution {}",
       },
     });
 
     const store = mockStore(
       createMockState({
-        chat: { selectedContexts: ["Problem Details", "Code"] },
+        chat: {
+          chats: [{ id: "chat1", messages: [] }],
+          currentChatId: "chat1",
+          selectedContexts: ["Problem Details", "Code"],
+        },
       }),
     );
 
@@ -173,13 +207,20 @@ describe("ChatWindow", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
+    const expectedProblemDetails = JSON.stringify({
+      title: "1. Two Sum",
+      description: "<p>Problem description</p>",
+      constraints: "constraints",
+      examples: "examples",
+    });
+
     expect(gemini.callGeminiApi).toHaveBeenCalledWith(
       "test-api-key",
-      expect.stringContaining("### Problem: 1. Two Sum"),
-    );
-    expect(gemini.callGeminiApi).toHaveBeenCalledWith(
-      "test-api-key",
-      expect.stringContaining("My message"),
+      "gemini-2.5-pro",
+      [],
+      expectedProblemDetails,
+      "class Solution {}",
+      "My message",
     );
   });
 
@@ -230,13 +271,7 @@ describe("ChatWindow", () => {
   });
 
   it("shows API key message when apiKey is not set", async () => {
-    const state = createMockState({
-      settings: {
-        apiKey: null,
-      },
-    });
-    const store = mockStore(state);
-
+    const store = mockStore(createMockState({ settings: { apiKey: null } }));
     await renderWithStore(store);
 
     expect(

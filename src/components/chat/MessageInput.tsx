@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/state/store.ts";
 import { addContext, removeContext } from "@/state/slices/chatSlice.ts";
 import { setSelectedModel } from "@/state/slices/settingsSlice.ts";
+import { MODEL_DISPLAY_NAMES } from "@/utils/models";
 import { setContextOpen, setModelMenuOpen } from "@/state/slices/uiSlice.ts";
 
 interface MessageInputProps {
@@ -154,24 +155,23 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
             >
               <Bot size={14} className="text-purple-400" />
               <span className="text-xs text-gray-300 font-medium">
-                {selectedModel}
+                {MODEL_DISPLAY_NAMES[selectedModel] || selectedModel}
               </span>
               <ChevronDown className="text-gray-300" size={14} />
             </button>
             {isModelMenuOpen && (
               <div className="absolute bottom-full mb-2 w-44 bg-[#3a3a3a] border border-gray-500 rounded-md shadow-lg z-10">
-                <button
-                  onClick={() => handleModelSelect("Gemini 2.5 Pro")}
-                  className="block w-full text-left px-3 py-1 text-sm text-white/80 hover:bg-gray-700"
-                >
-                  Gemini 2.5 Pro
-                </button>
-                <button
-                  onClick={() => handleModelSelect("Gemini 2.5 Flash")}
-                  className="block w-full text-left px-3 py-1 text-sm text-white/80 hover:bg-gray-700"
-                >
-                  Gemini 2.5 Flash
-                </button>
+                {Object.entries(MODEL_DISPLAY_NAMES).map(
+                  ([model, displayName]) => (
+                    <button
+                      key={model}
+                      onClick={() => handleModelSelect(model)}
+                      className="block w-full text-left px-3 py-1 text-sm text-white/80 hover:bg-gray-700"
+                    >
+                      {displayName}
+                    </button>
+                  ),
+                )}
               </div>
             )}
           </div>

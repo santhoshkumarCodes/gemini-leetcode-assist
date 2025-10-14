@@ -11,12 +11,12 @@ import {
 } from "@/state/slices/uiSlice";
 import ChatMessage from "./ChatMessage";
 import MessageInput from "./MessageInput";
-import { addMessage } from "@/state/slices/chatSlice";
+import { addMessage, loadChats } from "@/state/slices/chatSlice";
+import { nanoid } from "@reduxjs/toolkit";
 import { setLoading, setError, clearError } from "@/state/slices/apiSlice";
 import { callGeminiApi } from "@/utils/gemini";
 import { loadApiKey } from "@/state/slices/settingsSlice";
 import { X, Minus, Bot, Maximize2 } from "lucide-react";
-import { formatProblemContext } from "@/utils/context";
 
 const ChatWindow: FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -24,26 +24,36 @@ const ChatWindow: FC = () => {
   const { isChatOpen, isChatMinimized, chatPosition, chatSize } = useSelector(
     (state: RootState) => state.ui,
   );
-  const { messages, selectedContexts } = useSelector(
+  const { chats, currentChatId, selectedContexts } = useSelector(
     (state: RootState) => state.chat,
   );
-  const { apiKey } = useSelector((state: RootState) => state.settings);
+  const { apiKey, selectedModel } = useSelector(
+    (state: RootState) => state.settings,
+  );
   const { isLoading, error } = useSelector((state: RootState) => state.api);
+  const { currentProblemSlug } = useSelector(
+    (state: RootState) => state.problem,
+  );
 
   useEffect(() => {
     dispatch(loadApiKey());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (currentProblemSlug) {
+      dispatch(loadChats(currentProblemSlug));
+    }
+  }, [currentProblemSlug, dispatch]);
 
   const [problemTitle, setProblemTitle] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProblemTitle = async () => {
       try {
-        const problemSlug = window.location.pathname.split("/")[2];
-        if (problemSlug) {
-          const key = `leetcode-problem-${problemSlug}`;
+        if (currentProblemSlug) {
+          const key = `leetcode-problem-${currentProblemSlug}`;
           const result = await chrome.storage.local.get(key);
-          const problemData = result[key];
+          const problemData = result && result[key];
           if (problemData && problemData.title) {
             // Remove leading numbering like "1. " or "12. " from titles
             const cleaned = String(problemData.title)
@@ -65,7 +75,7 @@ const ChatWindow: FC = () => {
               })
               .join(" ");
 
-          setProblemTitle(prettify(problemSlug));
+          setProblemTitle(prettify(currentProblemSlug));
         }
       } catch (e) {
         console.error("Error loading problem title:", e);
@@ -73,39 +83,76 @@ const ChatWindow: FC = () => {
     };
 
     loadProblemTitle();
-  }, []);
+  }, [currentProblemSlug]);
 
   const handleSendMessage = async (text: string) => {
+    if (!currentProblemSlug) return;
+
     dispatch(clearError());
     if (!apiKey) {
       dispatch(setError("API key not set."));
       return;
     }
 
-    let messageToSend = text;
-    if (selectedContexts.length > 0) {
-      try {
-        const problemSlug = window.location.pathname.split("/")[2];
-        if (problemSlug) {
-          const key = `leetcode-problem-${problemSlug}`;
-          const result = await chrome.storage.local.get(key);
-          const problemData = result[key];
+    const userMessageId = nanoid();
+    const chatId = currentChatId || nanoid();
 
-          if (problemData) {
-            const context = formatProblemContext(problemData, selectedContexts);
-            messageToSend = `${context}\n${text}`;
+    dispatch(
+      addMessage({
+        text,
+        isUser: true,
+        problemSlug: currentProblemSlug,
+        messageId: userMessageId,
+        chatId,
+      }),
+    );
+    dispatch(setLoading(true));
+
+    try {
+      let problemDetails: string | null = null;
+      let userCode: string | null = null;
+
+      if (selectedContexts.length > 0 && currentProblemSlug) {
+        const key = `leetcode-problem-${currentProblemSlug}`;
+        const result = await chrome.storage.local.get(key);
+        const problemData = result[key];
+
+        if (problemData) {
+          if (selectedContexts.includes("Problem Details")) {
+            problemDetails = JSON.stringify({
+              title: problemData.title,
+              description: problemData.description,
+              constraints: problemData.constraints,
+              examples: problemData.examples,
+            });
+          }
+          if (selectedContexts.includes("Code")) {
+            userCode = problemData.code;
           }
         }
-      } catch (e) {
-        console.error("Error getting context:", e);
       }
-    }
 
-    dispatch(addMessage({ text: text, isUser: true })); // Show original text in chat
-    dispatch(setLoading(true));
-    try {
-      const response = await callGeminiApi(apiKey, messageToSend); // Send context to API
-      dispatch(addMessage({ text: response, isUser: false }));
+      const currentChat = chats.find((chat) => chat.id === currentChatId);
+      const chatHistory = currentChat ? currentChat.messages.slice(-10) : [];
+
+      const response = await callGeminiApi(
+        apiKey,
+        selectedModel,
+        chatHistory,
+        problemDetails,
+        userCode,
+        text,
+      );
+      const assistantMessageId = nanoid();
+      dispatch(
+        addMessage({
+          text: response,
+          isUser: false,
+          problemSlug: currentProblemSlug,
+          messageId: assistantMessageId,
+          chatId,
+        }),
+      );
     } catch (error) {
       dispatch(setError((error as Error).message));
     } finally {
@@ -116,6 +163,9 @@ const ChatWindow: FC = () => {
   if (!isChatOpen) {
     return null;
   }
+
+  const currentChat = chats.find((chat) => chat.id === currentChatId);
+  const messages = currentChat ? currentChat.messages : [];
 
   return (
     <div className="isolate">
@@ -218,6 +268,7 @@ const ChatWindow: FC = () => {
                           key={msg.id}
                           text={msg.text}
                           isUser={msg.isUser}
+                          status={msg.status}
                         />
                       ))}
                     </>
