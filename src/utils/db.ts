@@ -22,25 +22,45 @@ const getDB = () => {
   return dbPromise;
 };
 
-export const saveChat = async (
+// A map to queue save operations per problem slug, preventing race conditions.
+const saveChatQueue = new Map<string, Promise<void>>();
+
+export const saveChat = (
   problemSlug: string,
   chatId: string,
   messages: Chat["messages"],
-) => {
-  const db = await getDB();
-  const tx = db.transaction("chats", "readwrite");
-  const store = tx.objectStore("chats");
-  const allChatsForProblem = (await store.get(problemSlug)) || [];
-  const chatIndex = allChatsForProblem.findIndex((chat) => chat.id === chatId);
+): Promise<void> => {
+  const lastOperation = saveChatQueue.get(problemSlug) || Promise.resolve();
 
-  if (chatIndex > -1) {
-    allChatsForProblem[chatIndex].messages = messages;
-  } else {
-    allChatsForProblem.push({ id: chatId, messages });
-  }
+  const newOperation = lastOperation.then(async () => {
+    const db = await getDB();
+    const tx = db.transaction("chats", "readwrite");
+    const store = tx.objectStore("chats");
+    const allChatsForProblem = (await store.get(problemSlug)) || [];
+    const chatIndex = allChatsForProblem.findIndex(
+      (chat) => chat.id === chatId,
+    );
 
-  store.put(allChatsForProblem, problemSlug);
-  await tx.done;
+    if (chatIndex > -1) {
+      allChatsForProblem[chatIndex].messages = messages;
+    } else {
+      allChatsForProblem.push({ id: chatId, messages });
+    }
+
+    store.put(allChatsForProblem, problemSlug);
+    await tx.done;
+  });
+
+  saveChatQueue.set(problemSlug, newOperation);
+
+  // When the operation is done, if it's the last one for this slug, remove it.
+  newOperation.finally(() => {
+    if (saveChatQueue.get(problemSlug) === newOperation) {
+      saveChatQueue.delete(problemSlug);
+    }
+  });
+
+  return newOperation;
 };
 
 export const loadChats = async (problemSlug: string): Promise<Chat[]> => {

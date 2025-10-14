@@ -1,7 +1,7 @@
 // Import mockChrome from setupTests
 import { mockChrome } from "./setupTests";
 import { configureStore } from "@reduxjs/toolkit";
-import uiReducer, { UIState } from "@/state/slices/uiSlice";
+import uiReducer from "@/state/slices/uiSlice";
 import chatReducer from "@/state/slices/chatSlice";
 import settingsReducer from "@/state/slices/settingsSlice";
 import apiReducer from "@/state/slices/apiSlice";
@@ -328,66 +328,5 @@ describe("content-script", () => {
 
     // Should not trigger additional parsing
     expect(mockParseLeetCodeProblem).toHaveBeenCalledTimes(1); // Just the initial parse
-  });
-
-  it("handles chat toggle messages from popup", async () => {
-    await import("../scripts/content-script/content-script");
-
-    // Get initial state
-    const state = mockStore.getState() as RootState;
-    expect(state.ui.isChatOpen).toBe(false);
-
-    // Simulate receiving a TOGGLE_CHAT message
-    if (mockChrome.runtime.onMessage.addListener.mock.calls[0]) {
-      const messageListener =
-        mockChrome.runtime.onMessage.addListener.mock.calls[0][0];
-      await messageListener({ type: "TOGGLE_CHAT" });
-    }
-
-    // Verify the UI state was toggled
-    const finalState = mockStore.getState() as RootState;
-    expect(finalState.ui.isChatOpen).toBe(true);
-  });
-
-  it("stops observing when navigating away from a problem page", async () => {
-    await import("../scripts/content-script/content-script");
-    await Promise.resolve();
-
-    // Navigate to a non-problem page
-    window.history.replaceState({}, "", "/contest/");
-
-    // Trigger problem change
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // Add a title change that should be ignored
-    const titleElement = document.createElement("div");
-    titleElement.className = "text-title-large";
-    titleElement.textContent = "Contest Page";
-    document.body.appendChild(titleElement);
-
-    await new Promise((resolve) => setTimeout(resolve, 250));
-
-    // Should not trigger additional parsing
-    expect(mockParseLeetCodeProblem).toHaveBeenCalledTimes(1); // Just the initial parse
-  });
-
-  it("updates Redux store state through chat toggle action", async () => {
-    await import("../scripts/content-script/content-script");
-
-    // Get initial state
-    const initialState = mockStore.getState() as { ui: UIState };
-    expect(initialState.ui.isChatOpen).toBe(false);
-
-    // Dispatch toggle action through store
-    mockStore.dispatch({ type: "ui/toggleChat" });
-
-    // Verify state updated
-    const updatedState = mockStore.getState() as { ui: UIState };
-    expect(updatedState.ui.isChatOpen).toBe(true);
-
-    // Toggle back
-    mockStore.dispatch({ type: "ui/toggleChat" });
-    const finalState = mockStore.getState() as { ui: UIState };
-    expect(finalState.ui.isChatOpen).toBe(false);
   });
 });

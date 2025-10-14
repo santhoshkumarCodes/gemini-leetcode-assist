@@ -58,18 +58,10 @@ export const addMessage = createAsyncThunk(
   ) => {
     const { problemSlug, chatId, messageId } = payload;
     const state = getState() as { chat: { chats: Chat[] } };
-    const chat = state.chat.chats.find((c) => c.id === chatId);
-
-    if (!chat) {
-      return rejectWithValue({ chatId, messageId, error: "Chat not found" });
-    }
+    const chat = state.chat.chats.find((c) => c.id === chatId)!;
 
     try {
-      await saveChat(
-        problemSlug,
-        chatId,
-        JSON.parse(JSON.stringify(chat.messages)),
-      );
+      await saveChat(problemSlug, chatId, structuredClone(chat.messages));
       return { chatId, messageId };
     } catch (error) {
       console.error("Failed to save chat:", {
