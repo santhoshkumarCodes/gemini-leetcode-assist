@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/state/store";
 import { setCurrentChat, Chat } from "@/state/slices/chatSlice";
@@ -12,15 +12,19 @@ const ChatHistory: FC = () => {
   );
   const { isChatHistoryOpen } = useSelector((state: RootState) => state.ui);
 
+  // Sort chats by lastUpdated (most recent first)
+  const sortedChats = useMemo(
+    () =>
+      [...chats].sort((a, b) => (b.lastUpdated ?? 0) - (a.lastUpdated ?? 0)),
+    [chats],
+  );
+
   if (!isChatHistoryOpen) return null;
 
   const handleSelectChat = (chatId: string) => {
     dispatch(setCurrentChat(chatId));
     dispatch(setChatHistoryOpen(false));
   };
-
-  // Sort chats by lastUpdated (most recent first)
-  const sortedChats = [...chats].sort((a, b) => b.lastUpdated - a.lastUpdated);
 
   return (
     <div className="absolute top-10 left-0 right-0 bg-[#1E1E1E]/98 max-h-[350px] overflow-y-auto custom-scrollbar z-50 shadow-xl">
