@@ -5,6 +5,7 @@ import uiReducer, {
   setChatSize,
   setContextOpen,
   setModelMenuOpen,
+  setChatHistoryOpen,
   UIState,
 } from "@/state/slices/uiSlice";
 
@@ -15,6 +16,7 @@ const initialState: UIState = {
   chatSize: { width: 400, height: 600 },
   isContextOpen: false,
   isModelMenuOpen: false,
+  isChatHistoryOpen: false,
 };
 
 describe("uiSlice", () => {
@@ -52,5 +54,18 @@ describe("uiSlice", () => {
   it("should handle setModelMenuOpen", () => {
     const actual = uiReducer(initialState, setModelMenuOpen(true));
     expect(actual.isModelMenuOpen).toBe(true);
+  });
+
+  it("should handle setChatHistoryOpen", () => {
+    const actual = uiReducer(initialState, setChatHistoryOpen(true));
+    expect(actual.isChatHistoryOpen).toBe(true);
+  });
+
+  it("should toggle isChatHistoryOpen", () => {
+    const openState = uiReducer(initialState, setChatHistoryOpen(true));
+    expect(openState.isChatHistoryOpen).toBe(true);
+
+    const closedState = uiReducer(openState, setChatHistoryOpen(false));
+    expect(closedState.isChatHistoryOpen).toBe(false);
   });
 });

@@ -8,22 +8,28 @@ import {
   setChatSize,
   toggleChat,
   toggleMinimize,
+  setChatHistoryOpen,
 } from "@/state/slices/uiSlice";
 import ChatMessage from "./ChatMessage";
 import MessageInput from "./MessageInput";
-import { addMessage, loadChats } from "@/state/slices/chatSlice";
+import ChatHistory from "./ChatHistory";
+import { addMessage, loadChats, newChat } from "@/state/slices/chatSlice";
 import { nanoid } from "@reduxjs/toolkit";
 import { setLoading, setError, clearError } from "@/state/slices/apiSlice";
 import { callGeminiApi } from "@/utils/gemini";
 import { loadApiKey } from "@/state/slices/settingsSlice";
-import { X, Minus, Bot, Maximize2 } from "lucide-react";
+import { X, Minus, Bot, Maximize2, Plus, History } from "lucide-react";
 
 const ChatWindow: FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const nodeRef = useRef(null);
-  const { isChatOpen, isChatMinimized, chatPosition, chatSize } = useSelector(
-    (state: RootState) => state.ui,
-  );
+  const {
+    isChatOpen,
+    isChatMinimized,
+    chatPosition,
+    chatSize,
+    isChatHistoryOpen,
+  } = useSelector((state: RootState) => state.ui);
   const { chats, currentChatId, selectedContexts } = useSelector(
     (state: RootState) => state.chat,
   );
@@ -84,6 +90,15 @@ const ChatWindow: FC = () => {
 
     loadProblemTitle();
   }, [currentProblemSlug]);
+
+  const handleNewChat = () => {
+    dispatch(newChat());
+    dispatch(setChatHistoryOpen(false));
+  };
+
+  const handleToggleHistory = () => {
+    dispatch(setChatHistoryOpen(!isChatHistoryOpen));
+  };
 
   const handleSendMessage = async (text: string) => {
     if (!currentProblemSlug) return;
@@ -214,6 +229,24 @@ const ChatWindow: FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={handleNewChat}
+                  className="hover:bg-white/20 p-1 rounded transition-colors"
+                  aria-label="New Chat"
+                  title="New Chat"
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  onClick={handleToggleHistory}
+                  className={`hover:bg-white/20 p-1 rounded transition-colors ${
+                    isChatHistoryOpen ? "bg-white/20" : ""
+                  }`}
+                  aria-label="Chat History"
+                  title="Chat History"
+                >
+                  <History size={16} />
+                </button>
+                <button
                   onClick={() => dispatch(toggleMinimize())}
                   className="hover:bg-white/20 p-1 rounded"
                   aria-label="Minimize"
@@ -236,6 +269,7 @@ const ChatWindow: FC = () => {
 
             {!isChatMinimized && (
               <>
+                <ChatHistory />
                 <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
                   {messages.length === 0 && !isLoading ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-white">
