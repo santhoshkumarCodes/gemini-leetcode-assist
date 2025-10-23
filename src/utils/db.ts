@@ -29,6 +29,7 @@ export const saveChat = (
   problemSlug: string,
   chatId: string,
   messages: Chat["messages"],
+  lastUpdated?: number,
 ): Promise<void> => {
   const lastOperation = saveChatQueue.get(problemSlug) || Promise.resolve();
 
@@ -43,8 +44,13 @@ export const saveChat = (
 
     if (chatIndex > -1) {
       allChatsForProblem[chatIndex].messages = messages;
+      allChatsForProblem[chatIndex].lastUpdated = lastUpdated ?? Date.now();
     } else {
-      allChatsForProblem.push({ id: chatId, messages });
+      allChatsForProblem.push({
+        id: chatId,
+        messages,
+        lastUpdated: lastUpdated ?? Date.now(),
+      });
     }
 
     store.put(allChatsForProblem, problemSlug);
@@ -65,5 +71,10 @@ export const saveChat = (
 
 export const loadChats = async (problemSlug: string): Promise<Chat[]> => {
   const db = await getDB();
-  return (await db.get("chats", problemSlug)) || [];
+  const chats = (await db.get("chats", problemSlug)) || [];
+
+  return chats.map((chat) => ({
+    ...chat,
+    lastUpdated: chat.lastUpdated ?? Date.now(),
+  }));
 };

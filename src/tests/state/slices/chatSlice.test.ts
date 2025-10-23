@@ -4,6 +4,7 @@ import chatReducer, {
   removeContext,
   setCurrentChat,
   newChat,
+  updateChatTimestamp,
   loadChats,
   ChatState,
   Chat,
@@ -12,6 +13,10 @@ import chatReducer, {
 import { saveChat, loadChats as loadChatsFromDB } from "@/utils/db";
 
 jest.mock("@/utils/db");
+
+// Mock Date.now() for consistent timestamp testing
+const mockNow = 1234567890000;
+jest.spyOn(Date, "now").mockImplementation(() => mockNow);
 
 const initialState: ChatState = {
   chats: [],
@@ -25,6 +30,10 @@ const initialState: ChatState = {
 describe("chatSlice", () => {
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
   });
 
   it("should return the initial state", () => {
@@ -58,7 +67,13 @@ describe("chatSlice", () => {
     it("should handle addMessage.pending for an existing chat", () => {
       const existingState: ChatState = {
         ...initialState,
-        chats: [{ id: chatId, messages: [] as ChatMessage[] }],
+        chats: [
+          {
+            id: chatId,
+            messages: [] as ChatMessage[],
+            lastUpdated: mockNow - 1000,
+          },
+        ],
         currentChatId: chatId,
       };
       const action = {
@@ -74,6 +89,8 @@ describe("chatSlice", () => {
         isUser,
         status: "sending",
       });
+      // Should update timestamp when adding message
+      expect(state.chats[0].lastUpdated).toBe(mockNow);
     });
 
     it("should handle addMessage.fulfilled", () => {
@@ -83,6 +100,7 @@ describe("chatSlice", () => {
           {
             id: chatId,
             messages: [{ id: messageId, text, isUser, status: "sending" }],
+            lastUpdated: mockNow,
           },
         ],
         currentChatId: chatId,
@@ -102,6 +120,7 @@ describe("chatSlice", () => {
           {
             id: chatId,
             messages: [{ id: messageId, text, isUser, status: "sending" }],
+            lastUpdated: mockNow,
           },
         ],
         currentChatId: chatId,
@@ -139,15 +158,119 @@ describe("chatSlice", () => {
     expect(state.currentChatId).toBe("chat1");
   });
 
-  it("should handle newChat", () => {
-    const state = chatReducer(initialState, newChat());
-    expect(state.chats.length).toBe(1);
-    expect(state.currentChatId).toBe(state.chats[0].id);
+  describe("newChat", () => {
+    it("should create a new chat with timestamp", () => {
+      const state = chatReducer(initialState, newChat());
+      expect(state.chats.length).toBe(1);
+      expect(state.currentChatId).toBe(state.chats[0].id);
+      expect(state.chats[0].lastUpdated).toBe(mockNow);
+      expect(state.chats[0].messages).toEqual([]);
+    });
+
+    it("should reuse existing empty chat instead of creating new one", () => {
+      const stateWithEmptyChat: ChatState = {
+        ...initialState,
+        chats: [
+          { id: "empty-chat", messages: [], lastUpdated: mockNow - 1000 },
+          {
+            id: "chat-with-messages",
+            messages: [
+              { id: "msg1", text: "Hello", isUser: true, status: "succeeded" },
+            ],
+            lastUpdated: mockNow - 2000,
+          },
+        ],
+        currentChatId: "chat-with-messages",
+      };
+
+      const state = chatReducer(stateWithEmptyChat, newChat());
+
+      // Should not create a new chat
+      expect(state.chats.length).toBe(2);
+      // Should switch to the empty chat
+      expect(state.currentChatId).toBe("empty-chat");
+      // Should update the timestamp of the empty chat
+      expect(state.chats[0].lastUpdated).toBe(mockNow);
+    });
+
+    it("should create new chat when all existing chats have messages", () => {
+      const stateWithChats: ChatState = {
+        ...initialState,
+        chats: [
+          {
+            id: "chat1",
+            messages: [
+              { id: "msg1", text: "Hello", isUser: true, status: "succeeded" },
+            ],
+            lastUpdated: mockNow - 1000,
+          },
+        ],
+        currentChatId: "chat1",
+      };
+
+      const state = chatReducer(stateWithChats, newChat());
+
+      expect(state.chats.length).toBe(2);
+      expect(state.currentChatId).not.toBe("chat1");
+      expect(state.chats[1].messages).toEqual([]);
+      expect(state.chats[1].lastUpdated).toBe(mockNow);
+    });
+  });
+
+  describe("updateChatTimestamp", () => {
+    it("should update timestamp of specified chat", () => {
+      const oldTimestamp = mockNow - 5000;
+      const stateWithChat: ChatState = {
+        ...initialState,
+        chats: [{ id: "chat1", messages: [], lastUpdated: oldTimestamp }],
+        currentChatId: "chat1",
+      };
+
+      const state = chatReducer(stateWithChat, updateChatTimestamp("chat1"));
+
+      expect(state.chats[0].lastUpdated).toBe(mockNow);
+    });
+
+    it("should not affect other chats", () => {
+      const oldTimestamp1 = mockNow - 5000;
+      const oldTimestamp2 = mockNow - 3000;
+      const stateWithChats: ChatState = {
+        ...initialState,
+        chats: [
+          { id: "chat1", messages: [], lastUpdated: oldTimestamp1 },
+          { id: "chat2", messages: [], lastUpdated: oldTimestamp2 },
+        ],
+        currentChatId: "chat1",
+      };
+
+      const state = chatReducer(stateWithChats, updateChatTimestamp("chat1"));
+
+      expect(state.chats[0].lastUpdated).toBe(mockNow);
+      expect(state.chats[1].lastUpdated).toBe(oldTimestamp2); // unchanged
+    });
+
+    it("should do nothing if chat not found", () => {
+      const stateWithChat: ChatState = {
+        ...initialState,
+        chats: [{ id: "chat1", messages: [], lastUpdated: mockNow - 1000 }],
+        currentChatId: "chat1",
+      };
+
+      const state = chatReducer(
+        stateWithChat,
+        updateChatTimestamp("nonexistent"),
+      );
+
+      expect(state).toEqual(stateWithChat);
+    });
   });
 
   describe("loadChats thunk", () => {
-    it("should load chats and set the first as current", async () => {
-      const mockChats: Chat[] = [{ id: "chat1", messages: [] }];
+    it("should load chats and set the most recent as current", async () => {
+      const mockChats: Chat[] = [
+        { id: "chat1", messages: [], lastUpdated: mockNow - 2000 },
+        { id: "chat2", messages: [], lastUpdated: mockNow }, // Most recent
+      ];
       (loadChatsFromDB as jest.Mock).mockResolvedValue(mockChats);
       const dispatch = jest.fn();
       const thunk = loadChats("two-sum");
@@ -161,7 +284,8 @@ describe("chatSlice", () => {
       const pendingState = chatReducer(initialState, calls[0][0]);
       const finalState = chatReducer(pendingState, calls[1][0]);
       expect(finalState.chats).toEqual(mockChats);
-      expect(finalState.currentChatId).toBe("chat1");
+      // Should select the most recent chat (chat2)
+      expect(finalState.currentChatId).toBe("chat2");
       expect(finalState.currentProblemSlug).toBe("two-sum");
     });
 
@@ -180,7 +304,11 @@ describe("chatSlice", () => {
 
     it("should merge new chats with existing ones", async () => {
       // Setup state with an existing chat
-      const existingChat: Chat = { id: "chat1", messages: [] };
+      const existingChat: Chat = {
+        id: "chat1",
+        messages: [],
+        lastUpdated: mockNow - 1000,
+      };
       const currentState: ChatState = {
         ...initialState,
         chats: [existingChat],
@@ -189,7 +317,7 @@ describe("chatSlice", () => {
       };
 
       // Setup mock for loading chats
-      const newChat: Chat = { id: "chat2", messages: [] };
+      const newChat: Chat = { id: "chat2", messages: [], lastUpdated: mockNow };
       (loadChatsFromDB as jest.Mock).mockResolvedValue([newChat]);
 
       // Run the thunk
@@ -238,7 +366,9 @@ describe("chatSlice", () => {
     });
 
     it("should handle different problem slug in between load", async () => {
-      const mockChats: Chat[] = [{ id: "chat1", messages: [] }];
+      const mockChats: Chat[] = [
+        { id: "chat1", messages: [], lastUpdated: mockNow },
+      ];
       (loadChatsFromDB as jest.Mock).mockResolvedValue(mockChats);
 
       // Start with problem1
@@ -274,10 +404,10 @@ describe("chatSlice", () => {
       status: "sending",
     };
 
-    it("should save chat and handle success", async () => {
+    it("should save chat with timestamp and handle success", async () => {
       const state: ChatState = {
         ...initialState,
-        chats: [{ id: "chat1", messages: [message] }],
+        chats: [{ id: "chat1", messages: [message], lastUpdated: mockNow }],
         currentChatId: "chat1",
       };
 
@@ -298,6 +428,7 @@ describe("chatSlice", () => {
         "test-problem",
         "chat1",
         expect.any(Array),
+        mockNow, // lastUpdated timestamp
       );
 
       const finalState = chatReducer(
@@ -313,7 +444,7 @@ describe("chatSlice", () => {
         .mockImplementation(() => {});
       const state: ChatState = {
         ...initialState,
-        chats: [{ id: "chat1", messages: [message] }],
+        chats: [{ id: "chat1", messages: [message], lastUpdated: mockNow }],
         currentChatId: "chat1",
       };
 
