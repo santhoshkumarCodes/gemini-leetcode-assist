@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import puppeteer, { Browser, Page, WebWorker } from "puppeteer";
 import * as path from "path";
 import * as fs from "fs";
 
@@ -8,7 +8,7 @@ jest.setTimeout(120000);
 describe("E2E Tests", () => {
   let browser: Browser;
   let page: Page;
-  let serviceWorker: puppeteer.WebWorker;
+  let serviceWorker: WebWorker;
 
   beforeAll(async () => {
     const extensionPath = path.resolve(__dirname, "../../dist");
@@ -36,7 +36,11 @@ describe("E2E Tests", () => {
       (target) => target.type() === "service_worker",
       { timeout: 30000 },
     );
-    serviceWorker = await extensionTarget.worker();
+    const worker = await extensionTarget.worker();
+    if (!worker) {
+      throw new Error("Could not get service worker");
+    }
+    serviceWorker = worker;
     await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
@@ -62,11 +66,20 @@ describe("E2E Tests", () => {
     // Wait a bit for the async operations (parsing, message passing) to complete
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
+    interface ProblemData {
+      title: string;
+      code: string;
+      timestamp: number;
+    }
+
     const problemData = await serviceWorker.evaluate(() => {
-      return new Promise<never>((resolve) => {
-        chrome.storage.local.get("leetcode-problem-two-sum", (result) => {
-          resolve(result["leetcode-problem-two-sum"]);
-        });
+      return new Promise<ProblemData>((resolve) => {
+        chrome.storage.local.get(
+          "leetcode-problem-two-sum",
+          (result: { [key: string]: ProblemData }) => {
+            resolve(result["leetcode-problem-two-sum"]);
+          },
+        );
       });
     });
 

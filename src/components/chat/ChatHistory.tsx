@@ -13,11 +13,12 @@ const ChatHistory: FC = () => {
   const { isChatHistoryOpen } = useSelector((state: RootState) => state.ui);
 
   // Sort chats by lastUpdated (most recent first)
-  const sortedChats = useMemo(
-    () =>
-      [...chats].sort((a, b) => (b.lastUpdated ?? 0) - (a.lastUpdated ?? 0)),
-    [chats],
-  );
+  const sortedChats = useMemo(() => {
+    const now = Date.now();
+    return [...chats].sort(
+      (a, b) => (b.lastUpdated ?? now) - (a.lastUpdated ?? now),
+    );
+  }, [chats]);
 
   if (!isChatHistoryOpen) return null;
 
@@ -38,7 +39,9 @@ const ChatHistory: FC = () => {
             {sortedChats.map((chat: Chat) => {
               const isActive = currentChatId === chat.id;
               const title = generateChatTitle(chat.messages);
-              const timeAgo = formatRelativeTime(chat.lastUpdated);
+              const timeAgo = formatRelativeTime(
+                chat.lastUpdated ?? Date.now(),
+              );
 
               return (
                 <button

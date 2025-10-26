@@ -111,7 +111,9 @@ handleProblemChange();
 let debounceTimer: number | null = null;
 let lastSeenTitle: string | null = null;
 const observer = new MutationObserver(() => {
-  clearTimeout(debounceTimer);
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
   debounceTimer = window.setTimeout(() => {
     const titleElement = document.querySelector(".text-title-large");
     const currentTitle = titleElement?.textContent;

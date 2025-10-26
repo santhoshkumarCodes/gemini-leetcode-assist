@@ -5,7 +5,9 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "composite": true,
     "module": "CommonJS",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "noEmit": false,
+    "allowImportingTsExtensions": false
   },
   "include": ["vite.config.ts"]
 }

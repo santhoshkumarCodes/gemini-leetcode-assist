@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from "puppeteer";
+import puppeteer, { Browser, Page, WebWorker } from "puppeteer";
 import * as path from "path";
 import * as fs from "fs";
 
@@ -9,7 +9,7 @@ describe("Chat E2E", () => {
   let browser: Browser;
   let page: Page;
   let popupPage: Page;
-  let serviceWorker: puppeteer.WebWorker;
+  let serviceWorker: WebWorker;
   let extensionId: string;
 
   beforeAll(async () => {
@@ -38,7 +38,11 @@ describe("Chat E2E", () => {
       (target) => target.type() === "service_worker",
       { timeout: 30000 },
     );
-    serviceWorker = await extensionTarget.worker();
+    const worker = await extensionTarget.worker();
+    if (!worker) {
+      throw new Error("Could not get service worker");
+    }
+    serviceWorker = worker;
     await new Promise((resolve) => setTimeout(resolve, 2000));
     await serviceWorker.evaluate(() => {
       chrome.storage.local.set({ apiKey: "test-api-key" });
