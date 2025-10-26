@@ -25,7 +25,12 @@ const ChatMessage: FC<ChatMessageProps> = (props) => {
   const text = "text" in props ? props.text : props.message?.text || "";
   const isUser =
     "isUser" in props ? props.isUser : props.message?.sender === "user";
-  const status = "status" in props ? props.status : props.message?.status;
+  const status =
+    "status" in props
+      ? props.status
+      : "message" in props
+        ? props.message?.status
+        : undefined;
 
   if (isUser) {
     return (
@@ -59,7 +64,6 @@ const ChatMessage: FC<ChatMessageProps> = (props) => {
                     style={vscDarkPlus}
                     language={match[1]}
                     PreTag="div"
-                    {...props}
                   >
                     {codeText}
                   </SyntaxHighlighter>
