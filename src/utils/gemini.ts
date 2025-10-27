@@ -72,9 +72,12 @@ ${currentUserMessage}
     const result = await model.generateContentStream(finalPrompt);
 
     for await (const chunk of result.stream) {
-      const chunkText = chunk.text();
-      if (chunkText) {
-        yield chunkText;
+      if (chunk && chunk.text) {
+        // Check if chunk exists and has text method
+        const chunkText = chunk.text();
+        if (chunkText) {
+          yield chunkText;
+        }
       }
     }
   } catch (e) {

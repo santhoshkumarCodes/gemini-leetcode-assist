@@ -166,7 +166,9 @@ const ChatWindow: FC = () => {
         }
       }
 
-      const currentChat = chats.find((chat) => chat.id === chatId);
+      const currentChat = chats
+        ? chats.find((chat) => chat.id === chatId)
+        : null;
       const chatHistory = currentChat ? currentChat.messages.slice(-10) : [];
 
       // Start streaming message with empty text

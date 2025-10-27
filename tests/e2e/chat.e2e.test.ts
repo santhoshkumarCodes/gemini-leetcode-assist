@@ -120,6 +120,15 @@ describe("Chat E2E", () => {
     // Wait for the bot to respond
     await page.waitForSelector(".bot-message");
 
+    // Wait for the bot message to have content (streaming completes or error is shown)
+    await page.waitForFunction(
+      () => {
+        const botMsg = document.querySelector(".bot-message");
+        return botMsg && botMsg.textContent && botMsg.textContent.trim() !== "";
+      },
+      { timeout: 10000 },
+    );
+
     // Check that the bot message is not empty
     const botMessage = await page.$eval(".bot-message", (el) => el.textContent);
     expect(botMessage).not.toBe("");
@@ -221,6 +230,22 @@ describe("Chat E2E", () => {
     expect(userMessage).toBe("Test message with context");
 
     await page.waitForSelector(".bot-message");
+
+    // Wait for the bot message to have content (streaming completes or error is shown)
+    await page.waitForFunction(
+      () => {
+        const botMessages = document.querySelectorAll(".bot-message");
+        if (botMessages.length === 0) return false;
+        const lastBotMsg = botMessages[botMessages.length - 1];
+        return (
+          lastBotMsg &&
+          lastBotMsg.textContent &&
+          lastBotMsg.textContent.trim() !== ""
+        );
+      },
+      { timeout: 10000 },
+    );
+
     const botMessage = await page.$$eval(
       ".bot-message",
       (els) => els[els.length - 1].textContent,
