@@ -10,7 +10,7 @@ export interface ChatMessage {
   id: string;
   text: string;
   isUser: boolean;
-  status: "sending" | "succeeded" | "failed";
+  status: "sending" | "succeeded" | "failed" | "streaming";
 }
 
 export interface Chat {
@@ -76,7 +76,12 @@ export const addMessage = createAsyncThunk(
   ) => {
     const { problemSlug, chatId, messageId } = payload;
     const state = getState() as { chat: { chats: Chat[] } };
-    const chat = state.chat.chats.find((c) => c.id === chatId)!;
+    const chat = state.chat.chats.find((c) => c.id === chatId);
+
+    if (!chat) {
+      console.error("Chat not found:", { problemSlug, chatId, messageId });
+      return rejectWithValue({ chatId, messageId });
+    }
 
     try {
       await saveChat(
@@ -88,6 +93,45 @@ export const addMessage = createAsyncThunk(
       return { chatId, messageId };
     } catch (error) {
       console.error("Failed to save chat:", {
+        problemSlug,
+        chatId,
+        messageId,
+        error,
+      });
+      return rejectWithValue({ chatId, messageId });
+    }
+  },
+);
+
+export const finishStreamingMessageAndSave = createAsyncThunk(
+  "chat/finishStreamingMessageAndSave",
+  async (
+    payload: {
+      chatId: string;
+      messageId: string;
+      problemSlug: string;
+    },
+    { getState, rejectWithValue },
+  ) => {
+    const { problemSlug, chatId, messageId } = payload;
+    const state = getState() as { chat: { chats: Chat[] } };
+    const chat = state.chat.chats.find((c) => c.id === chatId);
+
+    if (!chat) {
+      console.error("Chat not found:", { problemSlug, chatId, messageId });
+      return rejectWithValue({ chatId, messageId });
+    }
+
+    try {
+      await saveChat(
+        problemSlug,
+        chatId,
+        structuredClone(chat.messages),
+        chat.lastUpdated,
+      );
+      return { chatId, messageId };
+    } catch (error) {
+      console.error("Failed to save streaming message:", {
         problemSlug,
         chatId,
         messageId,
@@ -140,6 +184,78 @@ const chatSlice = createSlice({
         chat.lastUpdated = Date.now();
       }
     },
+    startStreamingMessage: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        messageId: string;
+        text: string;
+      }>,
+    ) => {
+      const { chatId, messageId, text } = action.payload;
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (chat) {
+        chat.messages.push({
+          id: messageId,
+          text,
+          isUser: false,
+          status: "streaming",
+        });
+        chat.lastUpdated = Date.now();
+      }
+    },
+    updateStreamingMessage: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        messageId: string;
+        textChunk: string;
+      }>,
+    ) => {
+      const { chatId, messageId, textChunk } = action.payload;
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (chat) {
+        const message = chat.messages.find((m) => m.id === messageId);
+        if (message && message.status === "streaming") {
+          message.text += textChunk;
+        }
+      }
+    },
+    finishStreamingMessage: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        messageId: string;
+      }>,
+    ) => {
+      const { chatId, messageId } = action.payload;
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (chat) {
+        const message = chat.messages.find((m) => m.id === messageId);
+        if (message && message.status === "streaming") {
+          message.status = "succeeded";
+          chat.lastUpdated = Date.now();
+        }
+      }
+    },
+    failStreamingMessage: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        messageId: string;
+        errorMessage: string;
+      }>,
+    ) => {
+      const { chatId, messageId, errorMessage } = action.payload;
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (chat) {
+        const message = chat.messages.find((m) => m.id === messageId);
+        if (message && message.status === "streaming") {
+          message.status = "failed";
+          message.text = errorMessage;
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -152,7 +268,7 @@ const chatSlice = createSlice({
         }
         state.currentProblemSlug = action.meta.arg;
       })
-      .addCase(loadChats.fulfilled, (state, action: PayloadAction<Chat[]>) => {
+      .addCase(loadChats.fulfilled, (state, action) => {
         if (
           state.loading === "pending" &&
           state.currentRequestId === action.meta.requestId
@@ -247,6 +363,34 @@ const chatSlice = createSlice({
             message.status = "failed";
           }
         }
+      })
+      .addCase(finishStreamingMessageAndSave.pending, (state, action) => {
+        const { chatId, messageId } = action.meta.arg;
+        const chat = state.chats.find((c) => c.id === chatId);
+        if (chat) {
+          const message = chat.messages.find((m) => m.id === messageId);
+          if (message && message.status === "streaming") {
+            message.status = "succeeded";
+            chat.lastUpdated = Date.now();
+          }
+        }
+      })
+      .addCase(finishStreamingMessageAndSave.fulfilled, (_state, _action) => {
+        // Message is already marked as succeeded in pending case
+        // This case is mainly for completion tracking if needed
+      })
+      .addCase(finishStreamingMessageAndSave.rejected, (state, action) => {
+        const { chatId, messageId } = action.payload as {
+          chatId: string;
+          messageId: string;
+        };
+        const chat = state.chats.find((c) => c.id === chatId);
+        if (chat) {
+          const message = chat.messages.find((m) => m.id === messageId);
+          if (message) {
+            message.status = "failed";
+          }
+        }
       });
   },
 });
@@ -257,5 +401,9 @@ export const {
   setCurrentChat,
   newChat,
   updateChatTimestamp,
+  startStreamingMessage,
+  updateStreamingMessage,
+  finishStreamingMessage,
+  failStreamingMessage,
 } = chatSlice.actions;
 export default chatSlice.reducer;

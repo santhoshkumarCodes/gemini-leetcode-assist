@@ -2,9 +2,9 @@ import { callGeminiApi } from "@/utils/gemini";
 import { Chat } from "@/state/slices/chatSlice";
 
 // Mock the GoogleGenerativeAI library
-const mockGenerateContent = jest.fn();
+const mockGenerateContentStream = jest.fn();
 const mockGetGenerativeModel = jest.fn(() => ({
-  generateContent: mockGenerateContent,
+  generateContentStream: mockGenerateContentStream,
 }));
 
 jest.mock("@google/generative-ai", () => ({
@@ -21,22 +21,25 @@ describe("callGeminiApi", () => {
   const apiKey = "test-api-key";
   const modelName = "gemini-pro";
   const chatHistory: Chat["messages"] = [
-    { id: "1", text: "Hello", isUser: true },
-    { id: "2", text: "Hi there", isUser: false },
+    { id: "1", text: "Hello", isUser: true, status: "succeeded" },
+    { id: "2", text: "Hi there", isUser: false, status: "succeeded" },
   ];
   const problemDetails = '{"title":"Two Sum"}';
   const userCode = 'console.log("hello world")';
   const currentUserMessage = "How do I solve this?";
 
-  it("should return the text response from the API on success", async () => {
-    const mockResponse = {
-      response: {
-        text: () => "Test response",
-      },
+  it("should yield text chunks from the streaming API on success", async () => {
+    const mockChunks = [{ text: () => "Test " }, { text: () => "response" }];
+    const mockStream = {
+      stream: (async function* () {
+        for (const chunk of mockChunks) {
+          yield chunk;
+        }
+      })(),
     };
-    mockGenerateContent.mockResolvedValue(mockResponse);
+    mockGenerateContentStream.mockResolvedValue(mockStream);
 
-    const result = await callGeminiApi(
+    const generator = callGeminiApi(
       apiKey,
       modelName,
       chatHistory,
@@ -44,29 +47,37 @@ describe("callGeminiApi", () => {
       userCode,
       currentUserMessage,
     );
-    expect(result).toBe("Test response");
+
+    const chunks = [];
+    for await (const chunk of generator) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual(["Test ", "response"]);
   });
 
   it("should throw an error for an invalid API key", async () => {
-    await expect(
-      callGeminiApi(
-        null as unknown,
-        modelName,
-        chatHistory,
-        problemDetails,
-        userCode,
-        currentUserMessage,
-      ),
-    ).rejects.toThrow("Invalid API key provided.");
+    const generator = callGeminiApi(
+      "" as string,
+      modelName,
+      chatHistory,
+      problemDetails,
+      userCode,
+      currentUserMessage,
+    );
+
+    await expect(generator.next()).rejects.toThrow("Invalid API key provided.");
   });
 
   it("should construct the final prompt correctly", async () => {
-    mockGenerateContent.mockResolvedValue({
-      response: {
-        text: () => "mock response",
-      },
-    });
-    await callGeminiApi(
+    const mockStream = {
+      stream: (async function* () {
+        yield { text: () => "mock response" };
+      })(),
+    };
+    mockGenerateContentStream.mockResolvedValue(mockStream);
+
+    const generator = callGeminiApi(
       apiKey,
       modelName,
       chatHistory,
@@ -75,7 +86,9 @@ describe("callGeminiApi", () => {
       currentUserMessage,
     );
 
-    const finalPrompt = mockGenerateContent.mock.calls[0][0];
+    await generator.next();
+
+    const finalPrompt = mockGenerateContentStream.mock.calls[0][0];
     expect(finalPrompt).toContain(
       "You are an expert competitive programmer and mentor.",
     );
@@ -89,12 +102,14 @@ describe("callGeminiApi", () => {
   });
 
   it("should handle null problemDetails and userCode", async () => {
-    mockGenerateContent.mockResolvedValue({
-      response: {
-        text: () => "mock response",
-      },
-    });
-    await callGeminiApi(
+    const mockStream = {
+      stream: (async function* () {
+        yield { text: () => "mock response" };
+      })(),
+    };
+    mockGenerateContentStream.mockResolvedValue(mockStream);
+
+    const generator = callGeminiApi(
       apiKey,
       modelName,
       chatHistory,
@@ -103,7 +118,9 @@ describe("callGeminiApi", () => {
       currentUserMessage,
     );
 
-    const finalPrompt = mockGenerateContent.mock.calls[0][0];
+    await generator.next();
+
+    const finalPrompt = mockGenerateContentStream.mock.calls[0][0];
     expect(finalPrompt).toContain(
       "Problem Details:\nNo problem details provided.",
     );
@@ -139,34 +156,114 @@ describe("callGeminiApi", () => {
 
   errorTestCases.forEach(({ code, message }) => {
     it(`should throw a specific error for a ${code} response`, async () => {
-      mockGenerateContent.mockRejectedValue(
+      mockGenerateContentStream.mockRejectedValue(
         new Error(`Request failed with status code ${code}`),
       );
-      await expect(
-        callGeminiApi(
-          apiKey,
-          modelName,
-          chatHistory,
-          problemDetails,
-          userCode,
-          currentUserMessage,
-        ),
-      ).rejects.toThrow(message);
-    });
-  });
 
-  it("should throw a generic error for an unexpected error", async () => {
-    const errorMessage = "Some other error";
-    mockGenerateContent.mockRejectedValue(new Error(errorMessage));
-    await expect(
-      callGeminiApi(
+      const generator = callGeminiApi(
         apiKey,
         modelName,
         chatHistory,
         problemDetails,
         userCode,
         currentUserMessage,
-      ),
-    ).rejects.toThrow(`An unexpected error occurred: ${errorMessage}`);
+      );
+
+      await expect(generator.next()).rejects.toThrow(message);
+    });
+  });
+
+  it("should throw a generic error for an unexpected error", async () => {
+    const errorMessage = "Some other error";
+    mockGenerateContentStream.mockRejectedValue(new Error(errorMessage));
+
+    const generator = callGeminiApi(
+      apiKey,
+      modelName,
+      chatHistory,
+      problemDetails,
+      userCode,
+      currentUserMessage,
+    );
+
+    await expect(generator.next()).rejects.toThrow(
+      `An unexpected error occurred: ${errorMessage}`,
+    );
+  });
+
+  it("should handle empty chunks from the streaming API", async () => {
+    const mockChunks = [
+      { text: () => "" },
+      { text: () => "Valid text" },
+      { text: () => "" },
+    ];
+    const mockStream = {
+      stream: (async function* () {
+        for (const chunk of mockChunks) {
+          yield chunk;
+        }
+      })(),
+    };
+    mockGenerateContentStream.mockResolvedValue(mockStream);
+
+    const generator = callGeminiApi(
+      apiKey,
+      modelName,
+      chatHistory,
+      problemDetails,
+      userCode,
+      currentUserMessage,
+    );
+
+    const chunks = [];
+    for await (const chunk of generator) {
+      chunks.push(chunk);
+    }
+
+    // Should only yield non-empty chunks
+    expect(chunks).toEqual(["Valid text"]);
+  });
+
+  it("should handle null API key", async () => {
+    const generator = callGeminiApi(
+      null as unknown as string,
+      modelName,
+      chatHistory,
+      problemDetails,
+      userCode,
+      currentUserMessage,
+    );
+
+    await expect(generator.next()).rejects.toThrow("Invalid API key provided.");
+  });
+
+  it("should handle empty chat history", async () => {
+    const mockStream = {
+      stream: (async function* () {
+        yield { text: () => "response" };
+      })(),
+    };
+    mockGenerateContentStream.mockResolvedValue(mockStream);
+
+    const generator = callGeminiApi(
+      apiKey,
+      modelName,
+      [],
+      problemDetails,
+      userCode,
+      currentUserMessage,
+    );
+
+    const chunks = [];
+    for await (const chunk of generator) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toEqual(["response"]);
+
+    const finalPrompt = mockGenerateContentStream.mock.calls[0][0];
+    // Should not contain any chat history
+    expect(finalPrompt).not.toContain("User: ");
+    expect(finalPrompt).not.toContain("Assistant: ");
   });
 });

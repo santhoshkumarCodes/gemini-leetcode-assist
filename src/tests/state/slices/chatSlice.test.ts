@@ -6,6 +6,11 @@ import chatReducer, {
   newChat,
   updateChatTimestamp,
   loadChats,
+  startStreamingMessage,
+  updateStreamingMessage,
+  finishStreamingMessage,
+  failStreamingMessage,
+  finishStreamingMessageAndSave,
   ChatState,
   Chat,
   ChatMessage,
@@ -468,6 +473,333 @@ describe("chatSlice", () => {
       );
       expect(finalState.chats[0].messages[0].status).toBe("failed");
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe("streaming message actions", () => {
+    const chatId = "chat1";
+    const messageId = "msg1";
+    const initialChatState: ChatState = {
+      ...initialState,
+      chats: [{ id: chatId, messages: [], lastUpdated: mockNow - 1000 }],
+      currentChatId: chatId,
+    };
+
+    describe("startStreamingMessage", () => {
+      it("should add a new streaming message to the chat", () => {
+        const action = startStreamingMessage({
+          chatId,
+          messageId,
+          text: "",
+        });
+        const state = chatReducer(initialChatState, action);
+
+        expect(state.chats[0].messages.length).toBe(1);
+        expect(state.chats[0].messages[0]).toEqual({
+          id: messageId,
+          text: "",
+          isUser: false,
+          status: "streaming",
+        });
+        expect(state.chats[0].lastUpdated).toBe(mockNow);
+      });
+
+      it("should do nothing if chat doesn't exist", () => {
+        const action = startStreamingMessage({
+          chatId: "nonexistent",
+          messageId,
+          text: "",
+        });
+        const state = chatReducer(initialChatState, action);
+
+        expect(state.chats[0].messages.length).toBe(0);
+      });
+    });
+
+    describe("updateStreamingMessage", () => {
+      it("should append text chunk to streaming message", () => {
+        // First add a streaming message
+        let state = chatReducer(
+          initialChatState,
+          startStreamingMessage({
+            chatId,
+            messageId,
+            text: "Hello",
+          }),
+        );
+
+        // Then update it with more text
+        const action = updateStreamingMessage({
+          chatId,
+          messageId,
+          textChunk: " world",
+        });
+        state = chatReducer(state, action);
+
+        expect(state.chats[0].messages[0].text).toBe("Hello world");
+        expect(state.chats[0].messages[0].status).toBe("streaming");
+      });
+
+      it("should only update streaming messages", () => {
+        // Add a non-streaming message
+        const nonStreamingState: ChatState = {
+          ...initialState,
+          chats: [
+            {
+              id: chatId,
+              messages: [
+                {
+                  id: messageId,
+                  text: "Complete",
+                  isUser: false,
+                  status: "succeeded",
+                },
+              ],
+              lastUpdated: mockNow - 1000,
+            },
+          ],
+          currentChatId: chatId,
+        };
+
+        const action = updateStreamingMessage({
+          chatId,
+          messageId,
+          textChunk: " more",
+        });
+        const state = chatReducer(nonStreamingState, action);
+
+        // Message should not be updated
+        expect(state.chats[0].messages[0].text).toBe("Complete");
+      });
+
+      it("should do nothing if chat or message doesn't exist", () => {
+        const action = updateStreamingMessage({
+          chatId: "nonexistent",
+          messageId,
+          textChunk: " more",
+        });
+        const state = chatReducer(initialChatState, action);
+
+        expect(state).toEqual(initialChatState);
+      });
+    });
+
+    describe("finishStreamingMessage", () => {
+      it("should mark streaming message as succeeded", () => {
+        // First add a streaming message
+        let state = chatReducer(
+          initialChatState,
+          startStreamingMessage({
+            chatId,
+            messageId,
+            text: "Complete message",
+          }),
+        );
+
+        // Then finish it
+        const action = finishStreamingMessage({
+          chatId,
+          messageId,
+        });
+        state = chatReducer(state, action);
+
+        expect(state.chats[0].messages[0].status).toBe("succeeded");
+        expect(state.chats[0].lastUpdated).toBe(mockNow);
+      });
+
+      it("should only finish streaming messages", () => {
+        const nonStreamingState: ChatState = {
+          ...initialState,
+          chats: [
+            {
+              id: chatId,
+              messages: [
+                {
+                  id: messageId,
+                  text: "Already done",
+                  isUser: false,
+                  status: "succeeded",
+                },
+              ],
+              lastUpdated: mockNow - 1000,
+            },
+          ],
+          currentChatId: chatId,
+        };
+
+        const action = finishStreamingMessage({
+          chatId,
+          messageId,
+        });
+        const state = chatReducer(nonStreamingState, action);
+
+        // Status should remain unchanged and timestamp should not be updated for non-streaming messages
+        expect(state.chats[0].messages[0].status).toBe("succeeded");
+        expect(state.chats[0].lastUpdated).toBe(mockNow - 1000);
+      });
+    });
+
+    describe("failStreamingMessage", () => {
+      it("should mark streaming message as failed with error text", () => {
+        // First add a streaming message
+        let state = chatReducer(
+          initialChatState,
+          startStreamingMessage({
+            chatId,
+            messageId,
+            text: "Partial message",
+          }),
+        );
+
+        // Then fail it
+        const action = failStreamingMessage({
+          chatId,
+          messageId,
+          errorMessage: "API Error occurred",
+        });
+        state = chatReducer(state, action);
+
+        expect(state.chats[0].messages[0].status).toBe("failed");
+        expect(state.chats[0].messages[0].text).toBe("API Error occurred");
+      });
+
+      it("should only fail streaming messages", () => {
+        const nonStreamingState: ChatState = {
+          ...initialState,
+          chats: [
+            {
+              id: chatId,
+              messages: [
+                {
+                  id: messageId,
+                  text: "Good message",
+                  isUser: false,
+                  status: "succeeded",
+                },
+              ],
+              lastUpdated: mockNow - 1000,
+            },
+          ],
+          currentChatId: chatId,
+        };
+
+        const action = failStreamingMessage({
+          chatId,
+          messageId,
+          errorMessage: "Error",
+        });
+        const state = chatReducer(nonStreamingState, action);
+
+        // Message should remain unchanged
+        expect(state.chats[0].messages[0].status).toBe("succeeded");
+        expect(state.chats[0].messages[0].text).toBe("Good message");
+      });
+    });
+
+    describe("finishStreamingMessageAndSave async thunk", () => {
+      it("should save chat and mark message as succeeded", async () => {
+        const streamingState: ChatState = {
+          ...initialState,
+          chats: [
+            {
+              id: chatId,
+              messages: [
+                {
+                  id: messageId,
+                  text: "Complete",
+                  isUser: false,
+                  status: "streaming",
+                },
+              ],
+              lastUpdated: mockNow,
+            },
+          ],
+          currentChatId: chatId,
+        };
+
+        (saveChat as jest.Mock).mockResolvedValue(undefined);
+
+        const dispatch = jest.fn();
+        const thunk = finishStreamingMessageAndSave({
+          chatId,
+          messageId,
+          problemSlug: "test-problem",
+        });
+
+        await thunk(dispatch, () => ({ chat: streamingState }), undefined);
+
+        expect(saveChat).toHaveBeenCalledWith(
+          "test-problem",
+          chatId,
+          expect.any(Array),
+          mockNow,
+        );
+
+        const { calls } = dispatch.mock;
+        expect(calls.length).toBe(2);
+        expect(calls[0][0].type).toBe(
+          "chat/finishStreamingMessageAndSave/pending",
+        );
+        expect(calls[1][0].type).toBe(
+          "chat/finishStreamingMessageAndSave/fulfilled",
+        );
+
+        // Test the pending reducer
+        const pendingState = chatReducer(streamingState, calls[0][0]);
+        expect(pendingState.chats[0].messages[0].status).toBe("succeeded");
+        expect(pendingState.chats[0].lastUpdated).toBe(mockNow);
+      });
+
+      it("should handle save failure", async () => {
+        const consoleErrorSpy = jest
+          .spyOn(console, "error")
+          .mockImplementation(() => {});
+
+        const streamingState: ChatState = {
+          ...initialState,
+          chats: [
+            {
+              id: chatId,
+              messages: [
+                {
+                  id: messageId,
+                  text: "Complete",
+                  isUser: false,
+                  status: "streaming",
+                },
+              ],
+              lastUpdated: mockNow,
+            },
+          ],
+          currentChatId: chatId,
+        };
+
+        const error = new Error("Save failed");
+        (saveChat as jest.Mock).mockRejectedValue(error);
+
+        const dispatch = jest.fn();
+        const thunk = finishStreamingMessageAndSave({
+          chatId,
+          messageId,
+          problemSlug: "test-problem",
+        });
+
+        await thunk(dispatch, () => ({ chat: streamingState }), undefined);
+
+        const { calls } = dispatch.mock;
+        expect(calls[calls.length - 1][0].type).toBe(
+          "chat/finishStreamingMessageAndSave/rejected",
+        );
+
+        // Test the rejected reducer
+        const rejectedState = chatReducer(
+          streamingState,
+          calls[calls.length - 1][0],
+        );
+        expect(rejectedState.chats[0].messages[0].status).toBe("failed");
+
+        consoleErrorSpy.mockRestore();
+      });
     });
   });
 });
