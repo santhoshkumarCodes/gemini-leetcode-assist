@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Chat } from "../state/slices/chatSlice";
 
 /**
- * Calls the Gemini API with a structured prompt.
+ * Calls the Gemini API with a structured prompt and returns a streaming response.
  *
  * @param apiKey - The API key for the Gemini API.
  * @param modelName - The name of the Gemini model to use.
@@ -10,16 +10,16 @@ import { Chat } from "../state/slices/chatSlice";
  * @param problemDetails - The details of the LeetCode problem.
  * @param userCode - The user's code.
  * @param currentUserMessage - The user's latest message.
- * @returns A promise that resolves with the text response from the API.
+ * @returns An async generator that yields text chunks as they are generated.
  */
-export const callGeminiApi = async (
+export const callGeminiApi = async function* (
   apiKey: string,
   modelName: string,
   chatHistory: Chat["messages"],
   problemDetails: string | null,
   userCode: string | null,
   currentUserMessage: string,
-): Promise<string> => {
+): AsyncGenerator<string, void, unknown> {
   if (!apiKey || typeof apiKey !== "string") {
     throw new Error("Invalid API key provided.");
   }
@@ -33,9 +33,9 @@ Adapt your style dynamically based on how the user interacts:
 - If they express emotions (e.g., frustration, excitement), respond empathetically and motivate them.
 - If they are brainstorming casually, be a friendly coding buddy.
 
-When context is provided (like problem details or code), use it only if it is relevant to the user’s current message.
+When context is provided (like problem details or code), use it only if it is relevant to the user's current message.
 - If the user asks something that requires context (e.g., questions about their code or a problem) but no context was provided, ask them politely to click on \`Add Context\` and select the context (problem details or code) that is missing in the user's input.
-- If the user’s message is unrelated to the provided context (for example, a greeting or a casual question), ignore the context and respond naturally to their message alone.
+- If the user's message is unrelated to the provided context (for example, a greeting or a casual question), ignore the context and respond naturally to their message alone.
 
 Always keep responses concise, structured, and practical for competitive programming.
 `;
@@ -69,9 +69,17 @@ ${currentUserMessage}
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelName });
 
-    const result = await model.generateContent(finalPrompt);
-    const response = await result.response;
-    return response.text();
+    const result = await model.generateContentStream(finalPrompt);
+
+    for await (const chunk of result.stream) {
+      if (chunk && chunk.text) {
+        // Check if chunk exists and has text method
+        const chunkText = chunk.text();
+        if (chunkText) {
+          yield chunkText;
+        }
+      }
+    }
   } catch (e) {
     const error = e as Error;
     if (error.message.includes("400")) {

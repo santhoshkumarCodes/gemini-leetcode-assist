@@ -1,4 +1,4 @@
-import { FC, useRef, useEffect, useState } from "react";
+import { FC, useRef, useEffect, useState, useMemo } from "react";
 import Draggable from "react-draggable";
 import { Resizable } from "react-resizable";
 import { useSelector, useDispatch } from "react-redux";
@@ -13,9 +13,17 @@ import {
 import ChatMessage from "./ChatMessage";
 import MessageInput from "./MessageInput";
 import ChatHistory from "./ChatHistory";
-import { addMessage, loadChats, newChat } from "@/state/slices/chatSlice";
+import {
+  addMessage,
+  loadChats,
+  newChat,
+  startStreamingMessage,
+  updateStreamingMessage,
+  finishStreamingMessageAndSave,
+  failStreamingMessage,
+} from "@/state/slices/chatSlice";
 import { nanoid } from "@reduxjs/toolkit";
-import { setLoading, setError, clearError } from "@/state/slices/apiSlice";
+import { setError, clearError } from "@/state/slices/apiSlice";
 import { callGeminiApi } from "@/utils/gemini";
 import { loadApiKey } from "@/state/slices/settingsSlice";
 import { X, Minus, Bot, Maximize2, Plus, History } from "lucide-react";
@@ -23,6 +31,7 @@ import { X, Minus, Bot, Maximize2, Plus, History } from "lucide-react";
 const ChatWindow: FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const nodeRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const {
     isChatOpen,
     isChatMinimized,
@@ -52,6 +61,15 @@ const ChatWindow: FC = () => {
   }, [currentProblemSlug, dispatch]);
 
   const [problemTitle, setProblemTitle] = useState<string | null>(null);
+
+  const scrollToBottom = () => {
+    if (
+      messagesEndRef.current &&
+      typeof messagesEndRef.current.scrollIntoView === "function"
+    ) {
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  };
 
   useEffect(() => {
     const loadProblemTitle = async () => {
@@ -121,7 +139,8 @@ const ChatWindow: FC = () => {
         chatId,
       }),
     );
-    dispatch(setLoading(true));
+
+    const assistantMessageId = nanoid();
 
     try {
       let problemDetails: string | null = null;
@@ -147,10 +166,22 @@ const ChatWindow: FC = () => {
         }
       }
 
-      const currentChat = chats.find((chat) => chat.id === currentChatId);
+      const currentChat = chats
+        ? chats.find((chat) => chat.id === chatId)
+        : null;
       const chatHistory = currentChat ? currentChat.messages.slice(-10) : [];
 
-      const response = await callGeminiApi(
+      // Start streaming message with empty text
+      dispatch(
+        startStreamingMessage({
+          chatId,
+          messageId: assistantMessageId,
+          text: "",
+        }),
+      );
+
+      // Use the streaming API
+      const streamGenerator = callGeminiApi(
         apiKey,
         selectedModel,
         chatHistory,
@@ -158,29 +189,54 @@ const ChatWindow: FC = () => {
         userCode,
         text,
       );
-      const assistantMessageId = nanoid();
+
+      for await (const chunk of streamGenerator) {
+        dispatch(
+          updateStreamingMessage({
+            chatId,
+            messageId: assistantMessageId,
+            textChunk: chunk,
+          }),
+        );
+        // Scroll to bottom as new content streams in
+        scrollToBottom();
+      }
+
+      // Finish streaming and save to storage
       dispatch(
-        addMessage({
-          text: response,
-          isUser: false,
-          problemSlug: currentProblemSlug,
-          messageId: assistantMessageId,
+        finishStreamingMessageAndSave({
           chatId,
+          messageId: assistantMessageId,
+          problemSlug: currentProblemSlug,
         }),
       );
     } catch (error) {
+      dispatch(
+        failStreamingMessage({
+          chatId,
+          messageId: assistantMessageId,
+          errorMessage: (error as Error).message,
+        }),
+      );
       dispatch(setError((error as Error).message));
-    } finally {
-      dispatch(setLoading(false));
     }
   };
+
+  const messages = useMemo(() => {
+    const currentChat = chats.find((chat) => chat.id === currentChatId);
+    return currentChat ? currentChat.messages : [];
+  }, [chats, currentChatId]);
+
+  // Auto-scroll when messages change or when chat is opened
+  useEffect(() => {
+    if (isChatOpen && !isChatMinimized) {
+      scrollToBottom();
+    }
+  }, [messages, isChatOpen, isChatMinimized, isLoading, error]);
 
   if (!isChatOpen) {
     return null;
   }
-
-  const currentChat = chats.find((chat) => chat.id === currentChatId);
-  const messages = currentChat ? currentChat.messages : [];
 
   return (
     <div className="isolate">
@@ -310,6 +366,7 @@ const ChatWindow: FC = () => {
 
                   {isLoading && <ChatMessage text="..." isUser={false} />}
                   {error && <ChatMessage text={error} isUser={false} />}
+                  <div ref={messagesEndRef} />
                 </div>
                 <div className="p-2">
                   {apiKey ? (

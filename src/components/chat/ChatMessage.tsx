@@ -16,9 +16,13 @@ type ChatMessageProps =
   | {
       text: string;
       isUser: boolean;
-      status?: "sending" | "succeeded" | "failed";
+      status?: "sending" | "succeeded" | "failed" | "streaming";
     }
-  | { message: MessageShape & { status?: "sending" | "succeeded" | "failed" } };
+  | {
+      message: MessageShape & {
+        status?: "sending" | "succeeded" | "failed" | "streaming";
+      };
+    };
 
 const ChatMessage: FC<ChatMessageProps> = (props) => {
   // Support two prop shapes used across code/tests
