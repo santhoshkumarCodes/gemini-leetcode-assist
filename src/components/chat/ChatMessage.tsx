@@ -43,7 +43,8 @@ const ChatMessage: FC<ChatMessageProps> = (props) => {
           <span className="text-xs text-red-500 mr-2">Failed</span>
         )}
         <div
-          className={`max-w-[85%] rounded-lg px-4 py-2 text-[clamp(12px,2.5cqw,16px)] bg-blue-500 text-white ${status === "sending" ? "opacity-70" : ""}`}
+          className={`max-w-[85%] rounded-lg px-4 py-2 text-[clamp(12px,2.5cqw,16px)] text-white ${status === "sending" ? "opacity-70" : ""}`}
+          style={{ backgroundColor: "rgba(25, 74, 151, 0.45)" }}
         >
           {text}
         </div>

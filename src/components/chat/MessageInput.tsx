@@ -133,7 +133,8 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
       </div>
       <textarea
         id="gemini-chat-input"
-        className="bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none text-[clamp(12px,2.5cqw,16px)] px-1 pt-1 my-1 custom-scrollbar"
+        className="bg-transparent placeholder-gray-400 focus:outline-none resize-none text-[clamp(12px,2.5cqw,16px)] px-1 pt-1 my-1 custom-scrollbar"
+        style={{ color: "rgba(255, 255, 255, 0.9)" }}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={(e) => {

@@ -18,7 +18,7 @@ const CopyButton: FC<CopyButtonProps> = ({ textToCopy }) => {
   return (
     <button
       onClick={handleCopy}
-      className="absolute top-2 right-2 p-1 rounded-md bg-gray-700 hover:bg-gray-600"
+      className="absolute top-4 right-2 p-1 rounded-md bg-gray-700 hover:bg-gray-600 copy-button opacity-0 transition-opacity"
     >
       {copied ? (
         <Check className="w-4 h-4 text-green-500" />

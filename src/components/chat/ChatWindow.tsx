@@ -264,17 +264,19 @@ const ChatWindow: FC = () => {
         >
           <div
             ref={nodeRef}
-            className="@container absolute bg-[#1E1E1E]/80 rounded-lg shadow-2xl border border-white/20 flex flex-col pointer-events-auto overflow-hidden glass transform-gpu"
+            className="@container absolute bg-[#1E1E1E]/90 rounded-lg border border-white/20 flex flex-col pointer-events-auto overflow-hidden glass transform-gpu"
             style={{
               width: chatSize.width,
               height: isChatMinimized ? 40 : chatSize.height,
+              boxShadow:
+                "0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15)",
             }}
           >
             <div
               className="handle flex items-center justify-between w-full h-10 px-4 cursor-move flex-shrink-0"
               style={{
                 background:
-                  "linear-gradient(to right, rgba(126, 34, 206, 0.8), rgba(59, 130, 246, 0.7), rgba(6, 182, 212, 0.8))",
+                  "linear-gradient(to right, rgba(126, 34, 206, 0.65), rgba(59, 130, 246, 0.65), rgba(6, 182, 212, 0.65))",
               }}
             >
               <div className="flex items-center gap-2">

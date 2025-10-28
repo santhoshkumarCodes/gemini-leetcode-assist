@@ -1,71 +1,226 @@
 /* ChatMessage.css */
 .markdown-container {
   font-size: clamp(12px, 2.5cqw, 16px);
+  line-height: 1.6;
 }
 
+/* Headings */
 .markdown-container h1,
 .markdown-container h2,
 .markdown-container h3,
 .markdown-container h4,
 .markdown-container h5,
 .markdown-container h6 {
-  font-weight: bold;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
 }
 
 .markdown-container h1 {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .markdown-container h2 {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
 .markdown-container h3 {
+  font-size: 1.15rem;
+}
+
+.markdown-container h4 {
+  font-size: 1.05rem;
+}
+
+.markdown-container h5,
+.markdown-container h6 {
   font-size: 1rem;
 }
 
+/* Paragraphs */
+.markdown-container p {
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+.markdown-container p:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists */
 .markdown-container ul,
 .markdown-container ol {
-  margin-left: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-left: 1.75rem;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  padding-left: 0.5rem;
 }
 
-.markdown-container pre,
-.markdown-container code {
-  font-size: inherit;
+.markdown-container ul {
+  list-style-type: disc;
 }
 
-.markdown-container li {
+.markdown-container ol {
+  list-style-type: decimal;
+}
+
+.markdown-container ul ul {
+  list-style-type: circle;
   margin-bottom: 0.25rem;
 }
 
-.markdown-container p {
+.markdown-container ul ul ul {
+  list-style-type: square;
+}
+
+.markdown-container ol ol {
+  list-style-type: lower-alpha;
+}
+
+.markdown-container li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.markdown-container li > p {
   margin-bottom: 0.5rem;
 }
 
-.markdown-container a {
-  color: #3b82f6;
-  text-decoration: none;
+.markdown-container li:last-child {
+  margin-bottom: 0;
 }
 
-.markdown-container a:hover {
+/* Inline code */
+.markdown-container code:not(pre code) {
+  background-color: rgba(59, 130, 246, 0.2);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.9em;
+  font-family:
+    "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Code blocks */
+.markdown-container pre {
+  margin: 1rem 0;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.markdown-container pre code {
+  font-size: 0.9em;
+  font-family:
+    "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace;
+  background: transparent;
+  padding: 0;
+  display: block;
+}
+
+/* SyntaxHighlighter wrapper */
+.markdown-container .relative {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Show copy button on hover */
+.markdown-container .relative:hover .copy-button {
+  opacity: 0.8;
+}
+
+/* Target SyntaxHighlighter generated elements */
+.markdown-container .relative > div {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.markdown-container .relative > div > pre {
+  border-radius: 0.5rem;
+  margin: 0;
+}
+
+/* Links */
+.markdown-container a {
+  color: #3b82f6;
   text-decoration: underline;
 }
 
+.markdown-container a:hover {
+  color: #60a5fa;
+}
+
+/* Blockquotes */
+.markdown-container blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 0.25rem;
+}
+
+.markdown-container blockquote p {
+  margin: 0;
+}
+
+/* Tables */
 .markdown-container table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
+  border-radius: 0.375rem;
+  overflow: hidden;
 }
 
 .markdown-container th,
 .markdown-container td {
-  border: 1px solid #4b5563;
-  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem;
+  text-align: left;
 }
 
 .markdown-container th {
-  background-color: #374151;
+  background-color: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+}
+
+.markdown-container tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Horizontal Rule */
+.markdown-container hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 1.5rem 0;
+}
+
+/* Strong and Emphasis */
+.markdown-container strong {
+  font-weight: 700;
+}
+
+.markdown-container em {
+  font-style: italic;
+}
+
+/* Images */
+.markdown-container img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+  margin: 1rem 0;
+}
+
+/* Task Lists */
+.markdown-container input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+/* Strikethrough */
+.markdown-container del {
+  text-decoration: line-through;
+  opacity: 0.6;
 }
