@@ -13,7 +13,6 @@ interface MessageInputProps {
 
 const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
   const [message, setMessage] = useState("");
-  const [rows, setRows] = useState(1);
   const dispatch = useDispatch();
 
   const { isContextOpen, isModelMenuOpen } = useSelector(
@@ -26,10 +25,50 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-resize textarea based on content
   useEffect(() => {
-    const lineBreaks = message.split("\n").length;
-    setRows(Math.min(Math.max(lineBreaks, 1), 6));
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // If message is empty, reset to single line height
+    if (message === "") {
+      textarea.style.height = "auto";
+      textarea.style.overflowY = "hidden";
+      return;
+    }
+
+    // Store the current scroll position
+    const scrollTop = textarea.scrollTop;
+
+    // Temporarily set to auto to get the natural scroll height
+    textarea.style.height = "auto";
+
+    // Get the scroll height (natural content height)
+    const scrollHeight = textarea.scrollHeight;
+
+    // Get computed styles to calculate line height
+    const styles = window.getComputedStyle(textarea);
+    const lineHeightStr = styles.lineHeight;
+    const fontSize = parseFloat(styles.fontSize);
+    const lineHeight =
+      lineHeightStr === "normal" ? fontSize * 1.2 : parseFloat(lineHeightStr);
+
+    // Calculate max height (6 rows)
+    const maxHeight = lineHeight * 6;
+
+    // Set height to scroll height, but not exceeding max
+    const newHeight = Math.min(scrollHeight, maxHeight);
+    textarea.style.height = `${newHeight}px`;
+
+    // Enable scrolling only when content exceeds max height
+    textarea.style.overflowY = scrollHeight > maxHeight ? "auto" : "hidden";
+
+    // Restore scroll position if needed (when at max height)
+    if (scrollTop > 0 && scrollHeight > maxHeight) {
+      textarea.scrollTop = scrollTop;
+    }
   }, [message]);
 
   useEffect(() => {
@@ -132,9 +171,12 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
         ))}
       </div>
       <textarea
+        ref={textareaRef}
         id="gemini-chat-input"
         className="bg-transparent placeholder-gray-400 focus:outline-none resize-none text-[clamp(12px,2.5cqw,16px)] px-1 pt-1 my-1 custom-scrollbar"
-        style={{ color: "rgba(255, 255, 255, 0.9)" }}
+        style={{
+          color: "rgba(255, 255, 255, 0.9)",
+        }}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={(e) => {
@@ -144,7 +186,8 @@ const MessageInput: FC<MessageInputProps> = ({ onSendMessage }) => {
           }
         }}
         placeholder="Shift+Enter to insert a line break."
-        rows={rows}
+        aria-label="Message input"
+        rows={1}
       />
       <div className="flex items-center justify-between px-1 pb-1">
         <div className="flex items-center gap-2">
