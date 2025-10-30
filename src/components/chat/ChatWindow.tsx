@@ -32,6 +32,11 @@ const ChatWindow: FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const nodeRef = useRef(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  // When true we should auto-scroll to bottom as new content arrives.
+  // When the user scrolls up and distanceFromBottom > threshold we set this to false
+  // and respect user's position until they scroll back down within the threshold.
+  const autoScrollEnabledRef = useRef<boolean>(true);
   const {
     isChatOpen,
     isChatMinimized,
@@ -68,7 +73,20 @@ const ChatWindow: FC = () => {
       typeof messagesEndRef.current.scrollIntoView === "function"
     ) {
       messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    } else if (messagesContainerRef.current) {
+      // Fallback: scroll the container directly
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
+  };
+
+  const SCROLL_THRESHOLD = 80; // px - how close to bottom we consider 'at bottom'
+
+  const handleScroll = () => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    autoScrollEnabledRef.current = distanceFromBottom <= SCROLL_THRESHOLD;
   };
 
   useEffect(() => {
@@ -198,8 +216,12 @@ const ChatWindow: FC = () => {
             textChunk: chunk,
           }),
         );
-        // Scroll to bottom as new content streams in
-        scrollToBottom();
+        // Scroll to bottom as new content streams in, but only if the user
+        // is at (or near) the bottom. If the user scrolled up we respect
+        // their position and avoid forcing the viewport back down.
+        if (autoScrollEnabledRef.current) {
+          scrollToBottom();
+        }
       }
 
       // Finish streaming and save to storage
@@ -230,7 +252,11 @@ const ChatWindow: FC = () => {
   // Auto-scroll when messages change or when chat is opened
   useEffect(() => {
     if (isChatOpen && !isChatMinimized) {
-      scrollToBottom();
+      // Only auto-scroll when enabled. This keeps behaviour consistent:
+      // if the user intentionally scrolled up, we won't yank them down.
+      if (autoScrollEnabledRef.current) {
+        scrollToBottom();
+      }
     }
   }, [messages, isChatOpen, isChatMinimized, isLoading, error]);
 
@@ -328,7 +354,11 @@ const ChatWindow: FC = () => {
             {!isChatMinimized && (
               <>
                 <ChatHistory />
-                <div className="flex-grow p-4 overflow-y-auto custom-scrollbar">
+                <div
+                  ref={messagesContainerRef}
+                  onScroll={handleScroll}
+                  className="flex-grow p-4 overflow-y-auto custom-scrollbar"
+                >
                   {messages.length === 0 && !isLoading ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-white">
                       <h2 className="text-xl font-bold">
